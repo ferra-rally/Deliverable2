@@ -1,0 +1,4 @@
+./TestRepo
+
+# Project exclude paths
+/target/

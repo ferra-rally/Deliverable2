@@ -1,43 +1,17 @@
 package it.deliverable2;
 
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.errors.IncorrectObjectTypeException;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevObject;
-import org.eclipse.jgit.revwalk.RevTag;
-import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.io.*;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.json.JSONArray;
+
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
     private static String AVRO_URL = "https://github.com/apache/avro.git";
@@ -62,6 +36,27 @@ public class Main {
         return sb.toString();
     }
 
+    public static JSONObject readJsonFromUrl(String url) throws IOException, JSONException{
+        //InputStream is = new URL(url).openStream();
+
+        URL url1 = new URL(url);
+        HttpURLConnection conn = (HttpURLConnection) url1.openConnection();
+
+        conn.setRequestProperty("Authorization", "token " + System.getenv("GITHUB_TOKEN"));
+
+        InputStream is = conn.getInputStream();
+
+        try (
+                BufferedReader rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+        )
+        {
+            String jsonText = readAll(rd);
+            return new JSONObject(jsonText);
+        } finally {
+            is.close();
+        }
+    }
+
     public static JSONArray readJsonArrayFromUrl(String url) throws IOException, JSONException {
         InputStream is = new URL(url).openStream();
         try (BufferedReader rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));){
@@ -71,6 +66,21 @@ public class Main {
         } finally {
             is.close();
         }
+    }
+
+    public static Commit getCommitFromUrl(String url) throws IOException {
+        JSONObject jsonCommit = readJsonFromUrl(url);
+
+        JSONObject commitJSONObject = jsonCommit.getJSONObject("commit");
+
+        String message = commitJSONObject.getString("message");
+        String name = message.split(": ")[0];
+
+        ZonedDateTime dateTime = ZonedDateTime.parse(commitJSONObject.getJSONObject("committer").getString("date"));
+
+        System.out.println(jsonCommit.getString("sha") + " " + name + " " + dateTime);
+
+        return new Commit(name, message, jsonCommit.getString("sha"), dateTime);
     }
 
     public static List<Release> getReleases(String projOwner, String projName) throws IOException {
@@ -84,9 +94,39 @@ public class Main {
 
             for(int i = 0; i < jsonReleases.length(); i++) {
                 JSONObject obj = (JSONObject) jsonReleases.get(i);
+                String commitUrl = obj.getJSONObject("commit").getString("url");
+
 
                 Release release = new Release(obj.getJSONObject("commit").getString("url"), obj.getString("name"));
+                release.setCommit(getCommitFromUrl(commitUrl));
                 releases.add(release);
+            }
+
+            page++;
+
+        } while(jsonReleases.length() > 0);
+
+        for(int i = 0; i < releases.size(); i++) {
+            releases.get(i).setNumber(releases.size() - i);
+        }
+
+        return releases;
+    }
+
+    public static List<Commit> getCommits(String projOwner, String projName) throws IOException {
+        List<Commit> commits = new ArrayList<>();
+        int page = 1;
+        JSONArray jsonReleases;
+
+        do {
+            String url = "https://api.github.com/repos/" + projOwner + "/" + projName + "/commits?per_page=100&page=" + page;
+            jsonReleases = readJsonArrayFromUrl(url);
+
+            for(int i = 0; i < jsonReleases.length(); i++) {
+                JSONObject obj = (JSONObject) jsonReleases.get(i);
+
+                Commit commit;
+                //commits.add(commit);
             }
 
             System.out.println("Doing page " + page + " with " + jsonReleases.length() + " releases");
@@ -94,7 +134,7 @@ public class Main {
 
         } while(jsonReleases.length() > 0);
 
-        return releases;
+        return commits;
     }
 
     public static void main(String[] argv) throws GitAPIException, IOException {

@@ -1,14 +1,15 @@
 package it.deliverable2;
 
-import org.json.JSONObject;
-
 import java.time.ZonedDateTime;
 
 public class Commit {
     private String name;
     private String message;
+
+    //Identifier of the commit
     private String sha;
     private String author;
+    private String commitUrl;
 
     //Commit Date
     private ZonedDateTime date;
@@ -72,5 +73,13 @@ public class Commit {
 
     public void setAuthor(String author) {
         this.author = author;
+    }
+
+    public String getCommitUrl() {
+        return commitUrl;
+    }
+
+    public void setCommitUrl(String commitUrl) {
+        this.commitUrl = commitUrl;
     }
 }

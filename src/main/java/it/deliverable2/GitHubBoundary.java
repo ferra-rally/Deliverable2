@@ -11,10 +11,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class GitHubBoundary {
 
     private static final String COMMIT_STRING = "commit";
+    private static final Logger LOGGER = Logger.getLogger( GitHubBoundary.class.getName() );
 
     private String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -83,8 +86,6 @@ public class GitHubBoundary {
 
         ZonedDateTime dateTime = ZonedDateTime.parse(commitJSONObject.getJSONObject("committer").getString("date"));
 
-        System.out.println(jsonCommit.getString("sha") + " " + name + " " + dateTime);
-
         return new Commit(name, message, jsonCommit.getString("sha"), dateTime);
     }
 
@@ -110,6 +111,7 @@ public class GitHubBoundary {
                 releases.add(release);
             }
 
+            LOGGER.log(Level.INFO, "Releases: Doing page {0} with {1} releases", new Object[]{page, jsonReleases.length()});
             page++;
 
         } while(jsonReleases.length() > 0);
@@ -132,18 +134,25 @@ public class GitHubBoundary {
 
             for(int i = 0; i < jsonCommits.length(); i++) {
                 JSONObject obj = (JSONObject) jsonCommits.get(i);
+                JSONObject commitObj = obj.getJSONObject(COMMIT_STRING);
 
                 Commit commit = new Commit();
-                commit.setAuthor(obj.getJSONObject(COMMIT_STRING).getJSONObject("author").getString("name"));
+                commit.setAuthor(commitObj.getJSONObject("author").getString("name"));
 
-                String message = obj.getJSONObject(COMMIT_STRING).getString("message");
+                String message = commitObj.getString("message");
                 commit.setMessage(message);
                 commit.setName(getCommitName(message));
+
+                ZonedDateTime dateTime = ZonedDateTime.parse(commitObj.getJSONObject("committer").getString("date"));
+                commit.setDate(dateTime);
+                commit.setCommitUrl(obj.getString("url"));
+                commit.setSha(obj.getString("sha"));
 
                 commits.add(commit);
             }
 
-            System.out.println("Doing page " + page + " with " + jsonCommits.length() + " releases");
+            LOGGER.log(Level.INFO, "Commits: Doing page {0} with {1} commits", new Object[]{page, jsonCommits.length()});
+
             page++;
 
         } while(jsonCommits.length() > 0);

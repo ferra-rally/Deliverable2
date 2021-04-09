@@ -12,8 +12,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Main {
+    private static final Logger LOGGER = Logger.getLogger( Main.class.getName() );
     private static String AVRO_URL = "https://github.com/apache/avro.git";
 
     //Delete directory if exists
@@ -34,11 +37,32 @@ public class Main {
 
         GitHubBoundary gitHubBoundary = new GitHubBoundary();
 
-        //List<Release> releases = gitHubBoundary.getReleases(projOwner, projName);
-        //System.out.println(releases.size());
-        List<Commit> commits = gitHubBoundary.getCommits(projOwner, projName);
+        LOGGER.log(Level.INFO, "Fetching relases...");
+        List<Release> releases = gitHubBoundary.getReleases(projOwner, projName);
+        LOGGER.log(Level.INFO, "Number of relases: {0}", releases.size());
 
-        System.out.println(commits.size());
+        LOGGER.log(Level.INFO, "Fetching commits...");
+        List<Commit> commits = gitHubBoundary.getCommits(projOwner, projName);
+        List<Commit> commitsForReleases = new ArrayList<>(commits);
+        LOGGER.log(Level.INFO, "Number of commits: {0}", commits.size());
+
+        LOGGER.log(Level.INFO, "Assigning commits to realses...");
+        for(Release rel : releases) {
+            LOGGER.log(Level.INFO, "Doing release {0}", rel.getName());
+            ZonedDateTime date = rel.getDate();
+
+            List<Commit> commitsOfRelease = new ArrayList<>();
+
+            for(Commit commit : commitsForReleases) {
+                if(commit.getDate().isBefore(date)) {
+                    commitsOfRelease.add(commit);
+                    commitsOfRelease.remove(commit);
+                }
+            }
+
+            rel.setCommits(commitsOfRelease);
+            LOGGER.log(Level.INFO, "Release {0} with {1}", new Object[]{rel.getName(), commitsOfRelease.size()});
+        }
         //If the directory exists remove it
 
         /*

@@ -1,5 +1,7 @@
 package it.deliverable2;
 
+import org.json.JSONObject;
+
 import java.time.ZonedDateTime;
 
 public class Commit {
@@ -13,6 +15,9 @@ public class Commit {
 
     //Edited Files
     private String[] files;
+
+    public Commit() {
+    }
 
     public Commit(String name, String message, String sha, ZonedDateTime date) {
         this.name = name;

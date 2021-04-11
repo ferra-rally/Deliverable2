@@ -11,6 +11,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,38 +32,50 @@ public class Main {
         return directory.delete();
     }
 
-    public static void main(String[] argv) throws GitAPIException, IOException {
+    public static void main(String[] argv) throws IOException {
 
         String projName ="avro";
         String projOwner = "apache";
 
-        GitHubBoundary gitHubBoundary = new GitHubBoundary();
+        GitHubBoundary gitHubBoundary = new GitHubBoundary(0.5);
 
-        LOGGER.log(Level.INFO, "Fetching relases...");
+        LOGGER.log(Level.INFO, "Fetching releases...");
         List<Release> releases = gitHubBoundary.getReleases(projOwner, projName);
-        LOGGER.log(Level.INFO, "Number of relases: {0}", releases.size());
+        LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
 
         LOGGER.log(Level.INFO, "Fetching commits...");
         List<Commit> commits = gitHubBoundary.getCommits(projOwner, projName);
         List<Commit> commitsForReleases = new ArrayList<>(commits);
         LOGGER.log(Level.INFO, "Number of commits: {0}", commits.size());
 
-        LOGGER.log(Level.INFO, "Assigning commits to realses...");
+        LOGGER.log(Level.INFO, "Assigning commits to releases...");
         for(Release rel : releases) {
             LOGGER.log(Level.INFO, "Doing release {0}", rel.getName());
             ZonedDateTime date = rel.getDate();
 
             List<Commit> commitsOfRelease = new ArrayList<>();
 
-            for(Commit commit : commitsForReleases) {
+            //Assign commits to releases
+            for(Iterator<Commit> iterator = commitsForReleases.iterator(); iterator.hasNext(); ) {
+                Commit commit = iterator.next();
                 if(commit.getDate().isBefore(date)) {
                     commitsOfRelease.add(commit);
-                    commitsOfRelease.remove(commit);
+                    iterator.remove();
                 }
             }
 
             rel.setCommits(commitsOfRelease);
-            LOGGER.log(Level.INFO, "Release {0} with {1}", new Object[]{rel.getName(), commitsOfRelease.size()});
+            LOGGER.log(Level.INFO, "Release {0} with {1} of commits", new Object[]{rel.getName(), commitsOfRelease.size()});
+        }
+
+        for(Release rel : releases) {
+            List<Commit> commitsOfRelease = rel.getCommits();
+
+            for(Commit commit : commitsOfRelease) {
+                JSONObject jsonObject = gitHubBoundary.readJsonFromUrlGitHub(commit.getCommitUrl());
+
+                commit.setJsonObject(jsonObject);
+            }
         }
         //If the directory exists remove it
 

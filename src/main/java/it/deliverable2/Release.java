@@ -14,7 +14,7 @@ public class Release {
     private ZonedDateTime date;
 
     public Release(String name, String commitUrl) {
-        this.name = name;
+        this.setName(name);
         this.commitUrl = commitUrl;
     }
 
@@ -31,7 +31,7 @@ public class Release {
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.name = name.split("-")[1];
     }
 
     public int getNumber() {

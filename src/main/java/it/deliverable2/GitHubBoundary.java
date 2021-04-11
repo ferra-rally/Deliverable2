@@ -10,6 +10,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,6 +19,11 @@ public class GitHubBoundary {
 
     private static final String COMMIT_STRING = "commit";
     private static final Logger LOGGER = Logger.getLogger( GitHubBoundary.class.getName() );
+    private final double firtPercentReleases;
+
+    public GitHubBoundary(double firtPercentReleases) {
+        this.firtPercentReleases = firtPercentReleases;
+    }
 
     private String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -31,7 +37,7 @@ public class GitHubBoundary {
     private String getCommitName(String message) {
         String name;
         if(message.contains(":")) {
-            name = message.split(": ")[0];
+            name = message.split(":")[0];
         } else {
             name = message;
         }
@@ -91,6 +97,8 @@ public class GitHubBoundary {
 
     public List<Release> getReleases(String projOwner, String projName) throws IOException {
         List<Release> releases = new ArrayList<>();
+        List<Release> finalReleases = new ArrayList<>();
+
         int page = 1;
         JSONArray jsonReleases;
 
@@ -100,14 +108,14 @@ public class GitHubBoundary {
 
             for(int i = 0; i < jsonReleases.length(); i++) {
                 JSONObject obj = (JSONObject) jsonReleases.get(i);
-                String commitUrl = obj.getJSONObject(COMMIT_STRING).getString("url");
 
+                //If the release is a release candidate do not consider it
+                if(obj.getString("name").contains("rc")) {
+                    continue;
+                }
 
-                Release release = new Release(obj.getJSONObject(COMMIT_STRING).getString("url"), obj.getString("name"));
-                Commit commit = getCommitFromUrl(commitUrl);
-                release.setCommit(commit);
+                Release release = new Release(obj.getString("name"), obj.getJSONObject(COMMIT_STRING).getString("url"));
 
-                release.setDate(commit.getDate());
                 releases.add(release);
             }
 
@@ -117,10 +125,24 @@ public class GitHubBoundary {
         } while(jsonReleases.length() > 0);
 
         for(int i = 0; i < releases.size(); i++) {
-            releases.get(i).setNumber(releases.size() - i);
+            Release rel = releases.get(i);
+            rel.setNumber(releases.size() - i);
         }
 
-        return releases;
+        int number = (int) Math.ceil(releases.size() * (1.0 - firtPercentReleases));
+
+        LOGGER.log(Level.INFO, "Releases: Keeping first {0} releases", number);
+
+        for (int i = releases.size() - 1; i > number; i--) {
+            Release rel = releases.get(i);
+            Commit commit = getCommitFromUrl(rel.getCommitUrl());
+            rel.setCommit(commit);
+
+            rel.setDate(commit.getDate());
+            finalReleases.add(rel);
+        }
+
+        return finalReleases;
     }
 
     public List<Commit> getCommits(String projOwner, String projName) throws IOException {
@@ -157,6 +179,7 @@ public class GitHubBoundary {
 
         } while(jsonCommits.length() > 0);
 
+        Collections.reverse(commits);
         return commits;
     }
 }

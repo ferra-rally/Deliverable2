@@ -1,5 +1,7 @@
 package it.deliverable2;
 
+import org.json.JSONObject;
+
 import java.time.ZonedDateTime;
 
 public class Commit {
@@ -10,6 +12,7 @@ public class Commit {
     private String sha;
     private String author;
     private String commitUrl;
+    private JSONObject jsonObject;
 
     //Commit Date
     private ZonedDateTime date;
@@ -82,4 +85,14 @@ public class Commit {
     public void setCommitUrl(String commitUrl) {
         this.commitUrl = commitUrl;
     }
+
+
+    public JSONObject getJsonObject() {
+        return jsonObject;
+    }
+
+    public void setJsonObject(JSONObject jsonObject) {
+        this.jsonObject = jsonObject;
+    }
+
 }

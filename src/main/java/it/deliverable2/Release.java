@@ -6,6 +6,7 @@ import java.util.List;
 public class Release {
     private String commitUrl;
     private String name;
+    private String fullName;
     private int number;
     //Commit of the tag
     private Commit commit;
@@ -64,5 +65,13 @@ public class Release {
 
     public void setCommit(Commit commit) {
         this.commit = commit;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
     }
 }

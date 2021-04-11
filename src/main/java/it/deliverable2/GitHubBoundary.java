@@ -19,10 +19,10 @@ public class GitHubBoundary {
 
     private static final String COMMIT_STRING = "commit";
     private static final Logger LOGGER = Logger.getLogger( GitHubBoundary.class.getName() );
-    private final double firtPercentReleases;
+    private final double firstPercentReleases;
 
-    public GitHubBoundary(double firtPercentReleases) {
-        this.firtPercentReleases = firtPercentReleases;
+    public GitHubBoundary(double firstPercentReleases) {
+        this.firstPercentReleases = firstPercentReleases;
     }
 
     private String readAll(Reader rd) throws IOException {
@@ -110,11 +110,13 @@ public class GitHubBoundary {
                 JSONObject obj = (JSONObject) jsonReleases.get(i);
 
                 //If the release is a release candidate do not consider it
-                if(obj.getString("name").contains("rc")) {
+                String name = obj.getString("name");
+                if(name.contains("rc")) {
                     continue;
                 }
 
-                Release release = new Release(obj.getString("name"), obj.getJSONObject(COMMIT_STRING).getString("url"));
+                Release release = new Release(name, obj.getJSONObject(COMMIT_STRING).getString("url"));
+                release.setFullName(name);
 
                 releases.add(release);
             }
@@ -129,7 +131,7 @@ public class GitHubBoundary {
             rel.setNumber(releases.size() - i);
         }
 
-        int number = (int) Math.ceil(releases.size() * (1.0 - firtPercentReleases));
+        int number = (int) Math.ceil(releases.size() * (1.0 - firstPercentReleases));
 
         LOGGER.log(Level.INFO, "Releases: Keeping first {0} releases", number);
 

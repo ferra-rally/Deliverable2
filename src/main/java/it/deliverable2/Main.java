@@ -1,6 +1,8 @@
 package it.deliverable2;
 
+import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -32,11 +34,12 @@ public class Main {
         return directory.delete();
     }
 
-    public static void main(String[] argv) throws IOException {
+    public static void main(String[] argv) throws IOException, GitAPIException {
 
         String projName ="avro";
         String projOwner = "apache";
 
+        /*
         GitHubBoundary gitHubBoundary = new GitHubBoundary(0.5);
 
         LOGGER.log(Level.INFO, "Fetching releases...");
@@ -77,22 +80,28 @@ public class Main {
                 commit.setJsonObject(jsonObject);
             }
         }
-        //If the directory exists remove it
 
-        /*
         final File localPath = new File("./TestRepo");
 
         if(!localPath.exists()) {
+            LOGGER.log(Level.INFO, "Repository not found, downloading...");
             //Clone repo from GitHub
             Git.cloneRepository()
                     .setURI(AVRO_URL)
                     .setDirectory(localPath)
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider("***", "***"))
                     .call();
+            LOGGER.log(Level.INFO, "Download complete");
+        }*/
+
+        Process process = Runtime.getRuntime().exec("git ls-tree -r release-1.9.0 --name-only", null, localPath);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line = "";
+        while ((line = reader.readLine()) != null) {
+            System.out.println(line);
         }
 
-
-
+        /*
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         Repository repository = builder.setGitDir(new File("./TestRepo/.git"))
                 .readEnvironment() // scan environment GIT_* variables
@@ -108,15 +117,6 @@ public class Main {
         for (RevCommit rev : logs) {
             System.out.println("Commit: " + rev + " Name: " + rev.getName() + " ----- ");
 
-        }
-
-        List<Ref> tagList = git.tagList().call();
-        RevWalk walk = new RevWalk(repository);
-
-        for (Ref ref : tagList) {
-
-            System.out.println("Tag: " + ref.getName());
         }*/
-
     }
 }

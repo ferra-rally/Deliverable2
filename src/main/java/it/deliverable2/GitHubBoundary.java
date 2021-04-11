@@ -103,7 +103,7 @@ public class GitHubBoundary {
         JSONArray jsonReleases;
 
         do {
-            String url = "https://api.github.com/repos/" + projOwner + "/" + projName + "/tags?per_page=100&page=" + page;
+            String url = "https://api.github.com/repos/" + projOwner + "/" + projName + "/tags?per_page=100&page=" + page + "&include_all_branches=true";
             jsonReleases = readJsonArrayFromUrl(url);
 
             for(int i = 0; i < jsonReleases.length(); i++) {
@@ -153,7 +153,7 @@ public class GitHubBoundary {
         JSONArray jsonCommits;
 
         do {
-            String url = "https://api.github.com/repos/" + projOwner + "/" + projName + "/commits?per_page=100&page=" + page;
+            String url = "https://api.github.com/repos/" + projOwner + "/" + projName + "/commits?per_page=100&page=" + page + "&include_all_branches=true";
             jsonCommits = readJsonArrayFromUrl(url);
 
             for(int i = 0; i < jsonCommits.length(); i++) {

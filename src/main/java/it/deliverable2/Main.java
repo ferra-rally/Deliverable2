@@ -39,13 +39,13 @@ public class Main {
         String projName ="avro";
         String projOwner = "apache";
 
-        /*
         GitHubBoundary gitHubBoundary = new GitHubBoundary(0.5);
 
         LOGGER.log(Level.INFO, "Fetching releases...");
         List<Release> releases = gitHubBoundary.getReleases(projOwner, projName);
         LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
 
+        /*
         LOGGER.log(Level.INFO, "Fetching commits...");
         List<Commit> commits = gitHubBoundary.getCommits(projOwner, projName);
         List<Commit> commitsForReleases = new ArrayList<>(commits);
@@ -71,6 +71,7 @@ public class Main {
             LOGGER.log(Level.INFO, "Release {0} with {1} of commits", new Object[]{rel.getName(), commitsOfRelease.size()});
         }
 
+        //Get commits details
         for(Release rel : releases) {
             List<Commit> commitsOfRelease = rel.getCommits();
 
@@ -80,6 +81,8 @@ public class Main {
                 commit.setJsonObject(jsonObject);
             }
         }
+        */
+
 
         final File localPath = new File("./TestRepo");
 
@@ -92,14 +95,36 @@ public class Main {
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider("***", "***"))
                     .call();
             LOGGER.log(Level.INFO, "Download complete");
-        }*/
-
-        Process process = Runtime.getRuntime().exec("git ls-tree -r release-1.9.0 --name-only", null, localPath);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String line = "";
-        while ((line = reader.readLine()) != null) {
-            System.out.println(line);
         }
+
+        for(Release rel : releases) {
+            Process process = Runtime.getRuntime().exec("git ls-tree -r " + rel.getFullName() +  " --name-only", null, localPath);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            List<String> releaseFileList = new ArrayList<>();
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if(line.contains(".java")) {
+                    releaseFileList.add(line);
+                }
+            }
+
+            rel.setFileList(releaseFileList);
+        }
+
+        //Write output in csv
+        try (FileWriter outWriter = new FileWriter(projName + "_" + projOwner + "_out.csv")) {
+            for(Release rel : releases) {
+                int number = rel.getNumber();
+                List<String> fileList = rel.getFileList();
+
+                for (String file : fileList) {
+                    outWriter.write(number + "," + file + "\n");
+                }
+            }
+        }
+
+        //Write releases in csv
 
         /*
         FileRepositoryBuilder builder = new FileRepositoryBuilder();

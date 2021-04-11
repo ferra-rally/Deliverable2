@@ -136,7 +136,7 @@ public class Commit {
             String filename = fileObject.getString("filename");
 
             //Ignore files that are not java files
-            if(!filename.contains("java")) {
+            if(!filename.contains(".java")) {
                 continue;
             }
             RepoFile repoFile = new RepoFile(fileObject.getString("sha") , filename,

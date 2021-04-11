@@ -10,6 +10,7 @@ public class Release {
     private int number;
     //Commit of the tag
     private Commit commit;
+    private List<String> fileList;
 
     private List<Commit> commits;
     private ZonedDateTime date;
@@ -73,5 +74,13 @@ public class Release {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public List<String> getFileList() {
+        return fileList;
+    }
+
+    public void setFileList(List<String> fileList) {
+        this.fileList = fileList;
     }
 }

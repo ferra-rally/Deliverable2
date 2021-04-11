@@ -123,6 +123,7 @@ public class Main {
                 }
             }
         }
+        System.out.println(new JiraBoundary().getBugs("avro").get(0).getName());
 
         //Write releases in csv
 

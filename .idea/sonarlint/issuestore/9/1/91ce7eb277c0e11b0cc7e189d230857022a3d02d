@@ -1,0 +1,28 @@
+
+U
+java:S1128"3Remove this unused import 'org.json.JSONException'.(¹Ó·úÿÿÿÿ8„¯˜ş‹/
+T
+java:S1128"7Remove this unused import 'java.net.HttpURLConnection'.(¬¬˜­8„¯˜ş‹/
+p
+java:S3008"SRename this field "AVRO_URL" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(í¦ñÚ8åÒè“Š/
+k
+java:S4042""NUse "java.nio.file.Files#delete" here for better messages on error conditions.(ê©àÅ8åÒè“Š/
+]	java:S125+"<This block of commented-out lines of code should be removed.(İ“·ûüÿÿÿÿ8î¤Í€Œ/
+_
+java:S1854("=Remove this useless assignment to local variable "projOwner".(úÊ»øÿÿÿÿÿ8î¤Í€Œ/
+[
+java:S1128">Remove this unused import 'java.nio.charset.StandardCharsets'.(ï˜ŞÛ8„¯˜ş‹/
+^
+java:S1854'"<Remove this useless assignment to local variable "projName".(®—İ•úÿÿÿÿ8î¤Í€Œ/
+O
+java:S1481'"-Remove this unused "projName" local variable.(®—İ•úÿÿÿÿ8î¤Í€Œ/
+K
+java:S1128")Remove this unused import 'java.net.URL'.(ñìÁ„üÿÿÿÿ8„¯˜ş‹/
+P
+java:S1128".Remove this unused import 'java.util.HashMap'.(™˜”€ùÿÿÿÿ8„¯˜ş‹/
+Q
+java:S1128"/Remove this unused import 'org.json.JSONArray'.(¬¸Ê’üÿÿÿÿ8„¯˜ş‹/
+P
+java:S1481(".Remove this unused "projOwner" local variable.(úÊ»øÿÿÿÿÿ8î¤Í€Œ/
+Z	java:S106e"9Replace this use of System.out or System.err by a logger.(ñ—¸½úÿÿÿÿ8¸Ï€Œ/
+]	java:S125i"<This block of commented-out lines of code should be removed.(ûÛ·Ğúÿÿÿÿ8¸Ï€Œ/

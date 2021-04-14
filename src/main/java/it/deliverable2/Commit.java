@@ -1,10 +1,8 @@
 package it.deliverable2;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 public class Commit {
@@ -23,9 +21,6 @@ public class Commit {
     //Commit Date
     private ZonedDateTime date;
 
-    //Edited Files
-    private String[] files;
-
     public Commit() {
     }
 
@@ -34,6 +29,10 @@ public class Commit {
         this.message = message;
         this.sha = sha;
         this.date = date;
+    }
+
+    public Commit(JSONObject jsonObject) {
+        //TODO constructor using json
     }
 
     public String getName() {
@@ -66,14 +65,6 @@ public class Commit {
 
     public void setDate(ZonedDateTime date) {
         this.date = date;
-    }
-
-    public String[] getFiles() {
-        return files;
-    }
-
-    public void setFiles(String[] files) {
-        this.files = files;
     }
 
     public String getAuthor() {
@@ -121,6 +112,7 @@ public class Commit {
     }
 
     public void setJsonObject(JSONObject jsonObject) {
+        /*
         this.jsonObject = jsonObject;
 
         this.setAdditions(jsonObject.getJSONObject("stats").getInt("additions"));
@@ -128,6 +120,7 @@ public class Commit {
 
         List<RepoFile> repoFileListTemp = new ArrayList<>();
 
+        //TODO if does not exists?
         JSONArray filesArray = jsonObject.getJSONArray("files");
 
         for(int i = 0; i < filesArray.length(); i++) {
@@ -145,7 +138,9 @@ public class Commit {
             repoFileListTemp.add(repoFile);
         }
 
-        this.setRepoFileList(repoFileListTemp);
+        this.setRepoFileList(repoFileListTemp);*/
+
+        this.jsonObject = jsonObject;
     }
 
 }

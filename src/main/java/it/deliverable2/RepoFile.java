@@ -1,18 +1,30 @@
 package it.deliverable2;
 
+import org.json.JSONObject;
+
 public class RepoFile {
     private String sha;
     private String filename;
+    private int bugs = 0;
     private int addition;
     private int deletion;
     private int changes;
 
-    public RepoFile(String sha, String filename, int addition, int deletion, int changes) {
+    public RepoFile(String sha, String filename) {
         this.sha = sha;
         this.filename = filename;
-        this.addition = addition;
-        this.deletion = deletion;
-        this.changes = changes;
+    }
+
+    public RepoFile(String filename) {
+        this.filename = filename;
+    }
+
+    public RepoFile(JSONObject jsonObject) {
+        sha = jsonObject.getString("sha");
+        filename = jsonObject.getString("filename");
+        addition = jsonObject.getInt("additions");
+        deletion = jsonObject.getInt("deletions");
+        changes = jsonObject.getInt("changes");
     }
 
     public String getSha() {
@@ -53,5 +65,13 @@ public class RepoFile {
 
     public void setChanges(int changes) {
         this.changes = changes;
+    }
+
+    public void addBug() {
+        this.bugs++;
+    }
+
+    public boolean isBuggy() {
+        return bugs > 0;
     }
 }

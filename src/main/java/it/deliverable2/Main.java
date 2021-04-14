@@ -3,25 +3,15 @@ package it.deliverable2;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
     private static final Logger LOGGER = Logger.getLogger( Main.class.getName() );
-    private static String AVRO_URL = "https://github.com/apache/avro.git";
+    private final static String projectURL = "https://github.com/apache/avro.git";
 
     //Delete directory if exists
     private static boolean deleteDirectory(File directory) {
@@ -39,10 +29,10 @@ public class Main {
         String projName ="avro";
         String projOwner = "apache";
 
-        GitHubBoundary gitHubBoundary = new GitHubBoundary(0.5);
+        GitHubBoundary gitHubBoundary = new GitHubBoundary(projOwner, projName, 0.5);
 
         LOGGER.log(Level.INFO, "Fetching releases...");
-        List<Release> releases = gitHubBoundary.getReleases(projOwner, projName);
+        List<Release> releases = gitHubBoundary.getReleases();
         LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
 
         /*
@@ -90,41 +80,68 @@ public class Main {
             LOGGER.log(Level.INFO, "Repository not found, downloading...");
             //Clone repo from GitHub
             Git.cloneRepository()
-                    .setURI(AVRO_URL)
+                    .setURI(projectURL)
                     .setDirectory(localPath)
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider("***", "***"))
                     .call();
             LOGGER.log(Level.INFO, "Download complete");
         }
 
-        for(Release rel : releases) {
-            Process process = Runtime.getRuntime().exec("git ls-tree -r " + rel.getFullName() +  " --name-only", null, localPath);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            List<String> releaseFileList = new ArrayList<>();
+        Runtime runtime = Runtime.getRuntime();
+        //To store name in order
+        List<String> releasesNames = new ArrayList<>();
 
+        //Get file of release
+        for(Release rel : releases) {
+            Process process = runtime.exec("git ls-tree -r " + rel.getFullName() +  " --name-only", null, localPath);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            List<RepoFile> releaseFileList = new ArrayList<>();
+
+            //Track only .java files
             String line;
             while ((line = reader.readLine()) != null) {
                 if(line.contains(".java")) {
-                    releaseFileList.add(line);
+                    releaseFileList.add(new RepoFile(line));
                 }
             }
 
             rel.setFileList(releaseFileList);
+            releasesNames.add(rel.getName());
+        }
+
+        JiraBoundary jiraBoundary = new JiraBoundary();
+
+        List<Issue> issues = jiraBoundary.getBugs("avro");
+
+        for(Issue issue : issues) {
+            Process process = runtime.exec("git log --all --grep=\"" + issue.getName() + "[: .]\"", null, localPath);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if(line.contains("commit")) {
+                    String sha = line.split(" ")[1];
+                    if(!sha.isEmpty()) {
+                        Commit commit = gitHubBoundary.getCommitFromSha(sha);
+                        List<RepoFile> repoFileList = commit.getRepoFileList();
+
+                        issue.setAffects(repoFileList);
+                    }
+                }
+            }
         }
 
         //Write output in csv
         try (FileWriter outWriter = new FileWriter(projName + "_" + projOwner + "_out.csv")) {
             for(Release rel : releases) {
                 int number = rel.getNumber();
-                List<String> fileList = rel.getFileList();
+                List<RepoFile> fileList = rel.getFileList();
 
-                for (String file : fileList) {
-                    outWriter.write(number + "," + file + "\n");
+                for (RepoFile file : fileList) {
+                    outWriter.write(number + "," + file.getFilename() + "\n");
                 }
             }
         }
-        System.out.println(new JiraBoundary().getBugs("avro").get(0).getName());
-
         //Write releases in csv
 
         /*

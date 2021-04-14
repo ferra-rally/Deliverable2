@@ -36,27 +36,35 @@ public class JiraBoundary {
 
     public List<Issue> getBugs(String projName) throws IOException {
         List<Issue> issuesList = new ArrayList<>();
+        int i = 0;
+        int j;
+        int total;
+        do {
+            j = i + 1000;
 
-        String url = "https://issues.apache.org/jira/rest/api/2/search?jql=project="+ projName + "%20AND%20issuetype=Bug%20AND%20status%20=%20Closed%20and%20resolution%20=%20fixed" +
-                "%20AND%20affectedVersion%20in%20releasedVersions()";
-        JSONObject json = this.readJsonFromUrl(url);
-        JSONArray issues = json.getJSONArray("issues");
+            String url = "https://issues.apache.org/jira/rest/api/2/search?jql=project=" + projName + "%20AND%20issuetype=Bug%20AND%20status%20=%20Closed%20and%20resolution%20=%20fixed" +
+                    "%20AND%20affectedVersion%20in%20releasedVersions()&startAt=" + i + "&maxResults=" + j;
 
-        for(int i = 0; i < issues.length(); i++) {
-            JSONObject jsonObject = issues.getJSONObject(i);
-            JSONArray versionObject = jsonObject.getJSONObject("fields").getJSONArray("versions");
-            String start;
-            String end;
-            if(versionObject.length() == 1) {
-                end = start = versionObject.getJSONObject(0).getString("name");
-            } else {
-                start = versionObject.getJSONObject(0).getString("name");
-                end = versionObject.getJSONObject(1).getString("name");
+            JSONObject json = this.readJsonFromUrl(url);
+            JSONArray issues = json.getJSONArray("issues");
+            total = json.getInt("total");
+
+            for (; i < total && i < j; i++) {
+                JSONObject jsonObject = issues.getJSONObject(i);
+                JSONArray versionObject = jsonObject.getJSONObject("fields").getJSONArray("versions");
+                String start;
+                String end;
+                if (versionObject.length() == 1) {
+                    end = start = versionObject.getJSONObject(0).getString("name");
+                } else {
+                    start = versionObject.getJSONObject(0).getString("name");
+                    end = versionObject.getJSONObject(1).getString("name");
+                }
+
+                Issue issue = new Issue(jsonObject.getString("key"), start, end);
+                issuesList.add(issue);
             }
-
-            Issue issue = new Issue(jsonObject.getString("key"), start, end);
-            issuesList.add(issue);
-        }
+        } while (i < total);
 
         return issuesList;
     }

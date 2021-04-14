@@ -12,6 +12,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,8 +21,12 @@ public class GitHubBoundary {
     private static final String COMMIT_STRING = "commit";
     private static final Logger LOGGER = Logger.getLogger( GitHubBoundary.class.getName() );
     private final double firstPercentReleases;
+    private String projOwner = "";
+    private String projName = "";
 
-    public GitHubBoundary(double firstPercentReleases) {
+    public GitHubBoundary(String projOwner, String projName, double firstPercentReleases) {
+        this.projOwner = projOwner;
+        this.projName = projName;
         this.firstPercentReleases = firstPercentReleases;
     }
 
@@ -35,9 +40,10 @@ public class GitHubBoundary {
     }
 
     private String getCommitName(String message) {
+        //TODO not accurate, names may have different delimiters
         String name;
-        if(message.contains(":")) {
-            name = message.split(":")[0];
+        if(message.startsWith(this.projName.toUpperCase(Locale.ROOT))) {
+            name = message.split(": .")[0];
         } else {
             name = message;
         }
@@ -81,8 +87,8 @@ public class GitHubBoundary {
     }
 
     public Commit getCommitFromUrl(String url) throws IOException {
-        JSONObject jsonCommit = this.readJsonFromUrlGitHub(url);
 
+        JSONObject jsonCommit = this.readJsonFromUrlGitHub(url);
         JSONObject commitJSONObject = jsonCommit.getJSONObject(COMMIT_STRING);
 
         String message = commitJSONObject.getString("message");
@@ -90,12 +96,21 @@ public class GitHubBoundary {
 
         name = getCommitName(message);
 
-        ZonedDateTime dateTime = ZonedDateTime.parse(commitJSONObject.getJSONObject("committer").getString("date"));
+        JSONArray fileArray = jsonCommit.getJSONArray("files");
+        List<RepoFile> fileList = new ArrayList<>();
 
-        return new Commit(name, message, jsonCommit.getString("sha"), dateTime);
+        for(int i = 0; i < fileArray.length(); i++) {
+            JSONObject obj = fileArray.getJSONObject(i);
+            fileList.add(new RepoFile(obj));
+        }
+
+        ZonedDateTime dateTime = ZonedDateTime.parse(commitJSONObject.getJSONObject("committer").getString("date"));
+        Commit commit = new Commit(name, message, jsonCommit.getString("sha"), dateTime);
+        commit.setRepoFileList(fileList);
+        return commit;
     }
 
-    public List<Release> getReleases(String projOwner, String projName) throws IOException {
+    public List<Release> getReleases() throws IOException {
         List<Release> releases = new ArrayList<>();
         List<Release> finalReleases = new ArrayList<>();
 
@@ -131,10 +146,12 @@ public class GitHubBoundary {
             rel.setNumber(releases.size() - i);
         }
 
+        //TODO è giusto?
         int number = (int) Math.ceil(releases.size() * (1.0 - firstPercentReleases));
 
         LOGGER.log(Level.INFO, "Releases: Keeping first {0} releases", number);
 
+        //Invert order and set commit
         for (int i = releases.size() - 1; i > number; i--) {
             Release rel = releases.get(i);
             Commit commit = getCommitFromUrl(rel.getCommitUrl());
@@ -147,7 +164,7 @@ public class GitHubBoundary {
         return finalReleases;
     }
 
-    public List<Commit> getCommits(String projOwner, String projName) throws IOException {
+    public List<Commit> getCommits() throws IOException {
         List<Commit> commits = new ArrayList<>();
         int page = 1;
         JSONArray jsonCommits;
@@ -183,5 +200,51 @@ public class GitHubBoundary {
 
         Collections.reverse(commits);
         return commits;
+    }
+
+    public Commit searchCommit(String name) throws IOException {
+        Commit commit = new Commit();
+
+        URL url = new URL("https://api.github.com/search/commits?q=repo:" + projOwner + "/" + projName + "+" + '"' + name + '"');
+
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+        conn.setRequestProperty("Authorization", "token " + this.getGitHubToken());
+        conn.setRequestProperty("Accept", "application/vnd.github.cloak-preview");
+
+        try (InputStream is = conn.getInputStream();
+             BufferedReader rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
+        ) {
+            String jsonText = readAll(rd);
+
+            JSONObject searchResults =  new JSONObject(jsonText);
+            //There can be multiple search results
+            int total = searchResults.getInt("total_count");
+            if(total <= 0) {
+                LOGGER.log(Level.WARNING, "Commit {0} not found ", name);
+            } else if(total == 1) {
+                LOGGER.log(Level.WARNING, "Commit {0} found", name);
+                JSONObject result = searchResults.getJSONArray("items").getJSONObject(0);
+                String commitUrl = result.getString("url");
+
+                try {
+                    commit = this.getCommitFromUrl(commitUrl);
+                } catch (IOException e) {
+                    LOGGER.log(Level.INFO, "Commit {0} did not edit files", name);
+                }
+
+            } else {
+                LOGGER.log(Level.WARNING, "Multiple results found for commit {0}", name);
+                JSONArray results = searchResults.getJSONArray("items");
+            }
+        }
+
+        return commit;
+    }
+
+    public Commit getCommitFromSha(String sha) throws IOException {
+        String url = "https://api.github.com/repos/" + this.projOwner + "/" + this.projName +"/commits/" + sha;
+
+        return this.getCommitFromUrl(url);
     }
 }

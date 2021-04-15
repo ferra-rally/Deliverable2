@@ -7,6 +7,9 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,15 +25,11 @@ public class JiraBoundary {
     }
 
     public JSONObject readJsonFromUrl(String url) throws IOException, JSONException {
-        InputStream is = new URL(url).openStream();
-        try (
-                BufferedReader rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-        )
-        {
+        try (InputStream is = new URL(url).openStream();
+             BufferedReader rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+        ) {
             String jsonText = readAll(rd);
             return new JSONObject(jsonText);
-        } finally {
-            is.close();
         }
     }
 
@@ -51,17 +50,39 @@ public class JiraBoundary {
 
             for (; i < total && i < j; i++) {
                 JSONObject jsonObject = issues.getJSONObject(i);
-                JSONArray versionObject = jsonObject.getJSONObject("fields").getJSONArray("versions");
-                String start;
-                String end;
-                if (versionObject.length() == 1) {
-                    end = start = versionObject.getJSONObject(0).getString("name");
-                } else {
-                    start = versionObject.getJSONObject(0).getString("name");
-                    end = versionObject.getJSONObject(1).getString("name");
+                JSONObject fieldsObject = jsonObject.getJSONObject("fields");
+                //Get affected versions
+                JSONArray affectedVersionArray = fieldsObject.getJSONArray("versions");
+                JSONArray fixVersionArray = fieldsObject.getJSONArray("fixVersions");
+
+                List<String> affectedVersions = new ArrayList<>();
+                List<String> fixedVersion = new ArrayList<>();
+
+                //Get affected versions
+                for(int x = 0; x < affectedVersionArray.length(); x++) {
+                    String version = affectedVersionArray.getJSONObject(x).getString("name");
+                    affectedVersions.add(version);
                 }
 
-                Issue issue = new Issue(jsonObject.getString("key"), start, end);
+                //Get fixed versions
+                for(int x = 0; x < fixVersionArray.length(); x++) {
+                    String version = fixVersionArray.getJSONObject(x).getString("name");
+                    fixedVersion.add(version);
+                }
+
+                String dateString = fieldsObject.getString("resolutiondate");
+
+                DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+                        .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                        .appendPattern("XX")
+                        .toFormatter();
+
+                ZonedDateTime resolutionDate = ZonedDateTime.parse(dateString, formatter);
+
+                //Do not consider issue with same injected and fixed version
+                if(affectedVersions.size() == fixedVersion.size() && affectedVersions.get(0).equals(fixedVersion.get(0))) continue;
+
+                Issue issue = new Issue(jsonObject.getString("key"), affectedVersions, fixedVersion, resolutionDate);
                 issuesList.add(issue);
             }
         } while (i < total);

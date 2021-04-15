@@ -18,3 +18,5 @@ a
 1src/main/java/it/deliverable2/GitHubBoundary.java,1\e\1e2143c384167203263cc06f669a5327ca9bde63
 _
 /src/main/java/it/deliverable2/JiraBoundary.java,3\5\359f3175d17a5ed85c30a71712f6005905b1acba
+C
+avro_apache_out.csv,1\5\152737745d666a7f0998b35905215bea5957f024

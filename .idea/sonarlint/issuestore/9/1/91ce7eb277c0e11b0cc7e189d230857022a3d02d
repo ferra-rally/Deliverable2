@@ -1,18 +1,10 @@
 
-U	java:S106€"9Replace this use of System.out or System.err by a logger.(˜È¼d8ÇØÜßŒ/
-[
-java:S1128">Remove this unused import 'java.nio.charset.StandardCharsets'.(ï˜ÞÛ8„¯˜þ‹/
+t
+java:S3776"RRefactor this method to reduce its Cognitive Complexity from 20 to the 15 allowed.(ŽˆÅˆùÿÿÿÿ8£ÄëûŒ/
+X	java:S125'"<This block of commented-out lines of code should be removed.(œ²Ñî8ÇØÜßŒ/
+^	java:S125”"<This block of commented-out lines of code should be removed.(ûÛ·Ðúÿÿÿÿ8¸žÏ€Œ/
+{	java:S115"ZRename this constant name to match the regular expression '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.(ÍŽð®ûÿÿÿÿ8ý„µúŒ/
+g
+java:S1124"EReorder the modifiers to comply with the Java Language Specification.(ÍŽð®ûÿÿÿÿ8ŒÑ³úŒ/
 k
-java:S4042"NUse "java.nio.file.Files#delete" here for better messages on error conditions.(ê©àÅ8åÒè“Š/
-^	java:S125…"<This block of commented-out lines of code should be removed.(ûÛ·Ðúÿÿÿÿ8¸žÏ€Œ/
-T
-java:S1128"7Remove this unused import 'java.net.HttpURLConnection'.(¬¬˜­8„¯˜þ‹/
-K
-java:S1128")Remove this unused import 'java.net.URL'.(ñìÁ„üÿÿÿÿ8„¯˜þ‹/
-Q
-java:S1128"/Remove this unused import 'org.json.JSONArray'.(¬¸Ê’üÿÿÿÿ8„¯˜þ‹/
-U
-java:S1128"3Remove this unused import 'org.json.JSONException'.(¹Ó·úÿÿÿÿ8„¯˜þ‹/
-X	java:S125/"<This block of commented-out lines of code should be removed.(œ²Ñî8ÇØÜßŒ/
-p
-java:S3008"SRename this field "AVRO_URL" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(í¦ñÚ8åÒè“Š/
+java:S4042"NUse "java.nio.file.Files#delete" here for better messages on error conditions.(ê©àÅ8åÒè“Š/

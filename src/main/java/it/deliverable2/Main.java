@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 
 public class Main {
     private static final Logger LOGGER = Logger.getLogger( Main.class.getName() );
-    private final static String projectURL = "https://github.com/apache/avro.git";
+    private static final String PROJECTURL = "https://github.com/apache/avro.git";
 
     //Delete directory if exists
     private static boolean deleteDirectory(File directory) {
@@ -80,7 +80,7 @@ public class Main {
             LOGGER.log(Level.INFO, "Repository not found, downloading...");
             //Clone repo from GitHub
             Git.cloneRepository()
-                    .setURI(projectURL)
+                    .setURI(PROJECTURL)
                     .setDirectory(localPath)
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider("***", "***"))
                     .call();
@@ -126,6 +126,7 @@ public class Main {
                         List<RepoFile> repoFileList = commit.getRepoFileList();
 
                         issue.setAffects(repoFileList);
+                        LOGGER.log(Level.INFO, "Issue {0} with injected {1} and fixed {2} affects {3} files", new Object[]{issue.getName(), issue.getInjectVersion(), issue.getFixVersion(), repoFileList.size()});
                     }
                 }
             }
@@ -142,7 +143,6 @@ public class Main {
                 }
             }
         }
-        //Write releases in csv
 
         /*
         FileRepositoryBuilder builder = new FileRepositoryBuilder();

@@ -10,23 +10,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
-    private static final Logger LOGGER = Logger.getLogger( Main.class.getName() );
+    private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     private static final String PROJECTURL = "https://github.com/apache/avro.git";
-
-    //Delete directory if exists
-    private static boolean deleteDirectory(File directory) {
-        File[] allContents = directory.listFiles();
-        if (allContents != null) {
-            for (File file : allContents) {
-                deleteDirectory(file);
-            }
-        }
-        return directory.delete();
-    }
 
     public static void main(String[] argv) throws IOException, GitAPIException {
 
-        String projName ="avro";
+        String projName = "avro";
         String projOwner = "apache";
 
         GitHubBoundary gitHubBoundary = new GitHubBoundary(projOwner, projName, 0.5);
@@ -73,10 +62,9 @@ public class Main {
         }
         */
 
-
         final File localPath = new File("./TestRepo");
 
-        if(!localPath.exists()) {
+        if (!localPath.exists()) {
             LOGGER.log(Level.INFO, "Repository not found, downloading...");
             //Clone repo from GitHub
             Git.cloneRepository()
@@ -87,79 +75,35 @@ public class Main {
             LOGGER.log(Level.INFO, "Download complete");
         }
 
-        Runtime runtime = Runtime.getRuntime();
-        //To store name in order
-        List<String> releasesNames = new ArrayList<>();
+        gitHubBoundary.setReleaseFiles(releases, localPath);
 
-        //Get file of release
-        for(Release rel : releases) {
-            Process process = runtime.exec("git ls-tree -r " + rel.getFullName() +  " --name-only", null, localPath);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            List<RepoFile> releaseFileList = new ArrayList<>();
-
-            //Track only .java files
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if(line.contains(".java")) {
-                    releaseFileList.add(new RepoFile(line));
-                }
-            }
-
-            rel.setFileList(releaseFileList);
-            releasesNames.add(rel.getName());
-        }
-
-        JiraBoundary jiraBoundary = new JiraBoundary();
+        JiraBoundary jiraBoundary = new JiraBoundary(releases);
 
         List<Issue> issues = jiraBoundary.getBugs("avro");
 
-        for(Issue issue : issues) {
-            Process process = runtime.exec("git log --all --grep=\"" + issue.getName() + "[: .]\"", null, localPath);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        LOGGER.log(Level.INFO, "Setting issues files");
+        gitHubBoundary.setIssueAffectFile(issues, localPath);
 
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if(line.contains("commit")) {
-                    String sha = line.split(" ")[1];
-                    if(!sha.isEmpty()) {
-                        Commit commit = gitHubBoundary.getCommitFromSha(sha);
-                        List<RepoFile> repoFileList = commit.getRepoFileList();
+        //Assign bugs
+        for (Issue issue : issues) {
+            String injectVersion = issue.getInjectVersion();
+            String fixVersion = issue.getFixVersion();
 
-                        issue.setAffects(repoFileList);
-                        LOGGER.log(Level.INFO, "Issue {0} with injected {1} and fixed {2} affects {3} files", new Object[]{issue.getName(), issue.getInjectVersion(), issue.getFixVersion(), repoFileList.size()});
-                    }
+            boolean setBugs = false;
+
+            for (int i = 0; i < releases.size(); i++) {
+                Release rel = releases.get(i);
+
+                if (rel.getName().equals(injectVersion)) {
+                    setBugs = true;
+                } else if (rel.getName().equals(fixVersion)) {
+                    break;
+                }
+
+                if (setBugs && issue.getAffects() != null) {
+                    rel.setBugs(issue.getAffects());
                 }
             }
         }
-
-        //Write output in csv
-        try (FileWriter outWriter = new FileWriter(projName + "_" + projOwner + "_out.csv")) {
-            for(Release rel : releases) {
-                int number = rel.getNumber();
-                List<RepoFile> fileList = rel.getFileList();
-
-                for (RepoFile file : fileList) {
-                    outWriter.write(number + "," + file.getFilename() + "\n");
-                }
-            }
-        }
-
-        /*
-        FileRepositoryBuilder builder = new FileRepositoryBuilder();
-        Repository repository = builder.setGitDir(new File("./TestRepo/.git"))
-                .readEnvironment() // scan environment GIT_* variables
-                .findGitDir() // scan up the file system tree
-                .build();
-
-        System.out.println(Git.lsRemoteRepository().setRemote(AVRO_URL).setTags(true).call());
-
-        Git git = new Git(repository);
-
-        LogCommand log = git.log();
-        Iterable<RevCommit> logs = log.call();
-        for (RevCommit rev : logs) {
-            System.out.println("Commit: " + rev + " Name: " + rev.getName() + " ----- ");
-
-        }*/
     }
 }

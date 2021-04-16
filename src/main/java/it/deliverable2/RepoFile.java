@@ -71,7 +71,11 @@ public class RepoFile {
         this.bugs++;
     }
 
-    public boolean isBuggy() {
-        return bugs > 0;
+    public String isBuggy() {
+        if(bugs > 0) {
+            return "Yes";
+        } else {
+            return "No";
+        }
     }
 }

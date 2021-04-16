@@ -1,6 +1,7 @@
 package it.deliverable2;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Release {
@@ -18,6 +19,17 @@ public class Release {
     public Release(String name, String commitUrl) {
         this.setName(name);
         this.commitUrl = commitUrl;
+    }
+
+    public void setBugs(List<RepoFile> issueFiles) {
+        List<String> issueFileNames = new ArrayList<>();
+        for(RepoFile file : issueFiles) {
+            issueFileNames.add(file.getFilename());
+        }
+
+        for(RepoFile file : fileList) {
+            if(issueFileNames.contains(file.getFilename())) file.addBug();
+        }
     }
 
     public String getCommitUrl() {

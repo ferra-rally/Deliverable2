@@ -13,7 +13,6 @@ public class Commit {
     private String sha;
     private String author;
     private String commitUrl;
-    private JSONObject jsonObject;
     private List<RepoFile> repoFileList;
     private int additions;
     private int deletion;
@@ -29,10 +28,6 @@ public class Commit {
         this.message = message;
         this.sha = sha;
         this.date = date;
-    }
-
-    public Commit(JSONObject jsonObject) {
-        //TODO constructor using json
     }
 
     public String getName() {
@@ -107,40 +102,5 @@ public class Commit {
         this.deletion = deletion;
     }
 
-    public JSONObject getJsonObject() {
-        return jsonObject;
-    }
-
-    public void setJsonObject(JSONObject jsonObject) {
-        /*
-        this.jsonObject = jsonObject;
-
-        this.setAdditions(jsonObject.getJSONObject("stats").getInt("additions"));
-        this.setDeletion(jsonObject.getJSONObject("stats").getInt("deletions"));
-
-        List<RepoFile> repoFileListTemp = new ArrayList<>();
-
-        //TODO if does not exists?
-        JSONArray filesArray = jsonObject.getJSONArray("files");
-
-        for(int i = 0; i < filesArray.length(); i++) {
-            JSONObject fileObject = filesArray.getJSONObject(i);
-
-            String filename = fileObject.getString("filename");
-
-            //Ignore files that are not java files
-            if(!filename.contains(".java")) {
-                continue;
-            }
-            RepoFile repoFile = new RepoFile(fileObject.getString("sha") , filename,
-                    fileObject.getInt("additions"), fileObject.getInt("deletions"), fileObject.getInt("changes"));
-
-            repoFileListTemp.add(repoFile);
-        }
-
-        this.setRepoFileList(repoFileListTemp);*/
-
-        this.jsonObject = jsonObject;
-    }
 
 }

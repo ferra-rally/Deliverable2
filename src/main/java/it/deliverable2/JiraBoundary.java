@@ -14,6 +14,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JiraBoundary {
+    private List<Release> releases;
+
+    public JiraBoundary(List<Release> releases) {
+        this.releases = releases;
+    }
+
+    private String findRelease(ZonedDateTime dateTime) {
+        Release prev = releases.get(0);
+
+        for(Release rel : releases) {
+            if(dateTime.isAfter(rel.getDate())) {
+                return prev.getName();
+            }
+
+            prev = rel;
+        }
+
+        return "";
+    }
 
     private String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -78,6 +97,11 @@ public class JiraBoundary {
                         .toFormatter();
 
                 ZonedDateTime resolutionDate = ZonedDateTime.parse(dateString, formatter);
+
+                //Use date to find fixed version
+                if(fixedVersion.isEmpty()) {
+                    fixedVersion.add(findRelease(resolutionDate));
+                }
 
                 //Do not consider issue with same injected and fixed version
                 if(affectedVersions.size() == fixedVersion.size() && affectedVersions.get(0).equals(fixedVersion.get(0))) continue;

@@ -17,10 +17,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class GitHubBoundary {
+    //TODO git show release:filepath
 
     private static final String COMMIT_STRING = "commit";
     private static final Logger LOGGER = Logger.getLogger( GitHubBoundary.class.getName() );
     private final double firstPercentReleases;
+    //Runtime for console commands
+    private final Runtime runtime = Runtime.getRuntime();
     private String projOwner = "";
     private String projName = "";
 
@@ -40,7 +43,6 @@ public class GitHubBoundary {
     }
 
     private String getCommitName(String message) {
-        //TODO not accurate, names may have different delimiters
         String name;
         if(message.startsWith(this.projName.toUpperCase(Locale.ROOT))) {
             name = message.split(": .")[0];
@@ -126,6 +128,9 @@ public class GitHubBoundary {
 
                 //If the release is a release candidate do not consider it
                 String name = obj.getString("name");
+
+                //TODO do not consider extra releases
+                //For bookeper ignore docker
                 if(name.contains("rc")) {
                     continue;
                 }
@@ -147,12 +152,10 @@ public class GitHubBoundary {
         }
 
         //TODO è giusto?
-        int number = (int) Math.ceil(releases.size() * (1.0 - firstPercentReleases));
-
-        LOGGER.log(Level.INFO, "Releases: Keeping first {0} releases", number);
+        int number = (int) Math.ceil(releases.size() * (1 - firstPercentReleases));
 
         //Invert order and set commit
-        for (int i = releases.size() - 1; i > number; i--) {
+        for (int i = releases.size() - 1; i >= number; i--) {
             Release rel = releases.get(i);
             Commit commit = getCommitFromUrl(rel.getCommitUrl());
             rel.setCommit(commit);
@@ -160,6 +163,19 @@ public class GitHubBoundary {
             rel.setDate(commit.getDate());
             finalReleases.add(rel);
         }
+
+        //DEBUG show all releases and used releases
+        List<String> releaseNames = new ArrayList<>();
+        for(Release rel : releases) {
+            releaseNames.add(rel.getName());
+        }
+        LOGGER.log(Level.INFO, "All releases {0}", releaseNames);
+
+        releaseNames = new ArrayList<>();
+        for(Release rel : finalReleases) {
+            releaseNames.add(rel.getName());
+        }
+        LOGGER.log(Level.INFO, "Used releases {0}", releaseNames);
 
         return finalReleases;
     }
@@ -246,5 +262,45 @@ public class GitHubBoundary {
         String url = "https://api.github.com/repos/" + this.projOwner + "/" + this.projName +"/commits/" + sha;
 
         return this.getCommitFromUrl(url);
+    }
+
+    public void setReleaseFiles(List<Release> releases, File localPath) throws IOException {
+        //Get file of release
+        for (Release rel : releases) {
+            Process process = runtime.exec("git ls-tree -r " + rel.getFullName() + " --name-only", null, localPath);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            List<RepoFile> releaseFileList = new ArrayList<>();
+
+            //Track only .java files
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains(".java")) {
+                    releaseFileList.add(new RepoFile(line));
+                }
+            }
+
+            rel.setFileList(releaseFileList);
+        }
+    }
+
+    public void setIssueAffectFile(List<Issue> issues, File localPath) throws IOException {
+        for (Issue issue : issues) {
+            LOGGER.log(Level.INFO, "Doing {0}\r", issue.getName());
+            Process process = runtime.exec("git log --all --grep=\"" + issue.getName() + "[: .]\"", null, localPath);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("commit")) {
+                    String sha = line.split(" ")[1];
+                    if (!sha.isEmpty()) {
+                        Commit commit = getCommitFromSha(sha);
+                        List<RepoFile> repoFileList = commit.getRepoFileList();
+
+                        issue.setAffects(repoFileList);
+                    }
+                }
+            }
+        }
     }
 }

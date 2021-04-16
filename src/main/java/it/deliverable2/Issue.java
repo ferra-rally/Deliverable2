@@ -13,7 +13,6 @@ public class Issue {
     public Issue(String name, List<String> affected, List<String> fixed, ZonedDateTime resolutionDate) {
         this.name = name;
         this.resolutionDate = resolutionDate;
-        this.fixVersion = "";
 
         if(!fixed.isEmpty()) {
             this.fixVersion = fixed.get(0);

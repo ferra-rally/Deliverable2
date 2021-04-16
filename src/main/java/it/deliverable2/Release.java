@@ -3,8 +3,9 @@ package it.deliverable2;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-public class Release {
+public class Release implements Comparable<Release>{
     private String commitUrl;
     private String name;
     private String fullName;
@@ -19,6 +20,14 @@ public class Release {
     public Release(String name, String commitUrl) {
         this.setName(name);
         this.commitUrl = commitUrl;
+    }
+
+    //Used by jira
+    public Release(String name, ZonedDateTime dateTime) {
+        this.name = name;
+        this.date = dateTime;
+
+        this.fullName = "release-" + this.name;
     }
 
     public void setBugs(List<RepoFile> issueFiles) {
@@ -45,7 +54,8 @@ public class Release {
     }
 
     public void setName(String name) {
-        this.name = name.split("-")[1];
+        //this.name = name.split("-")[1];
+        this.name = name;
     }
 
     public int getNumber() {
@@ -94,5 +104,23 @@ public class Release {
 
     public void setFileList(List<RepoFile> fileList) {
         this.fileList = fileList;
+    }
+
+    @Override
+    public int compareTo(Release rel) {
+        return getDate().compareTo(rel.getDate());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Release release = (Release) o;
+        return number == release.number && Objects.equals(commitUrl, release.commitUrl) && Objects.equals(name, release.name) && Objects.equals(fullName, release.fullName) && Objects.equals(commit, release.commit) && Objects.equals(fileList, release.fileList) && Objects.equals(commits, release.commits) && Objects.equals(date, release.date);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(commitUrl, name, fullName, number, commit, fileList, commits, date);
     }
 }

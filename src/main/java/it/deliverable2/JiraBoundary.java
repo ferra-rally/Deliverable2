@@ -7,18 +7,23 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class JiraBoundary {
     private List<Release> releases;
+    private List<Release> allReleases;
 
-    public JiraBoundary(List<Release> releases) {
-        this.releases = releases;
-    }
+    private static final Logger LOGGER = Logger.getLogger( JiraBoundary.class.getName() );
 
     private String findRelease(ZonedDateTime dateTime) {
         Release prev = releases.get(0);
@@ -113,4 +118,65 @@ public class JiraBoundary {
 
         return issuesList;
     }
+
+    public List<Release> getReleases(String projName, double firstPercentReleases, File localPath) throws IOException {
+        List<Release> releasesList = new ArrayList<>();
+        List<Release> croppedReleasesList = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        String url = "https://issues.apache.org/jira/rest/api/2/project/" + projName.toUpperCase(Locale.ROOT);
+
+        JSONObject result = this.readJsonFromUrl(url);
+        JSONArray versions = result.getJSONArray("versions");
+
+        for(int i = 0; i < versions.length(); i++) {
+            JSONObject versionJSON = versions.getJSONObject(i);
+            String name = versionJSON.getString("name");
+            ZonedDateTime zonedDateTime;
+
+            if(versionJSON.isNull("releaseDate")) {
+                zonedDateTime = new GitHubBoundary().getReleaseDate(name, localPath);
+            } else {
+                String dateString = versionJSON.getString("releaseDate");
+                LocalDate date = LocalDate.parse(dateString, formatter);
+
+                //Missing timezone information, default to Greenwich
+                zonedDateTime = date.atStartOfDay(ZoneId.of("UTC"));
+            }
+
+            Release release = new Release(name, zonedDateTime);
+            releasesList.add(release);
+        }
+
+        Collections.sort(releasesList);
+
+        for(int i = 0; i < releasesList.size(); i++) {
+            releasesList.get(i).setNumber(i + 1);
+        }
+
+        int number = (int) Math.floor(releasesList.size() * (1 - firstPercentReleases));
+
+        for(int i = 0; i < number; i++) {
+            croppedReleasesList.add(releasesList.get(i));
+        }
+
+        //DEBUG show all releases and used releases
+        List<String> releaseNames = new ArrayList<>();
+        for(Release rel : releasesList) {
+            releaseNames.add(rel.getName());
+        }
+        LOGGER.log(Level.INFO, "All releases {0}", releaseNames);
+
+        releaseNames = new ArrayList<>();
+        for(Release rel : croppedReleasesList) {
+            releaseNames.add(rel.getName());
+        }
+        LOGGER.log(Level.INFO, "Used releases {0}", releaseNames);
+
+        this.releases = croppedReleasesList;
+        this.allReleases = releasesList;
+
+        return croppedReleasesList;
+    }
+
 }

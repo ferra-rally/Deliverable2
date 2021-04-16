@@ -18,10 +18,14 @@ public class Main {
         String projName = "avro";
         String projOwner = "apache";
 
+        final File localPath = new File("./TestRepo");
+
         GitHubBoundary gitHubBoundary = new GitHubBoundary(projOwner, projName, 0.5);
+        JiraBoundary jiraBoundary = new JiraBoundary();
 
         LOGGER.log(Level.INFO, "Fetching releases...");
-        List<Release> releases = gitHubBoundary.getReleases();
+        //List<Release> releases = gitHubBoundary.getReleases();
+        List<Release> releases = jiraBoundary.getReleases(projName, 0.5, localPath);
         LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
 
         /*
@@ -62,8 +66,6 @@ public class Main {
         }
         */
 
-        final File localPath = new File("./TestRepo");
-
         if (!localPath.exists()) {
             LOGGER.log(Level.INFO, "Repository not found, downloading...");
             //Clone repo from GitHub
@@ -77,14 +79,13 @@ public class Main {
 
         gitHubBoundary.setReleaseFiles(releases, localPath);
 
-        JiraBoundary jiraBoundary = new JiraBoundary(releases);
-
         List<Issue> issues = jiraBoundary.getBugs("avro");
 
         LOGGER.log(Level.INFO, "Setting issues files");
         gitHubBoundary.setIssueAffectFile(issues, localPath);
 
         //Assign bugs
+        //TODO use release compare
         for (Issue issue : issues) {
             String injectVersion = issue.getInjectVersion();
             String fixVersion = issue.getFixVersion();
@@ -105,5 +106,8 @@ public class Main {
                 }
             }
         }
+
+        //Write CSV
+        Utils.writeCsv(projName, projOwner, releases);
     }
 }

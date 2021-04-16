@@ -9,10 +9,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,7 +19,7 @@ public class GitHubBoundary {
 
     private static final String COMMIT_STRING = "commit";
     private static final Logger LOGGER = Logger.getLogger( GitHubBoundary.class.getName() );
-    private final double firstPercentReleases;
+    private double firstPercentReleases = 0.5;
     //Runtime for console commands
     private final Runtime runtime = Runtime.getRuntime();
     private String projOwner = "";
@@ -31,6 +29,10 @@ public class GitHubBoundary {
         this.projOwner = projOwner;
         this.projName = projName;
         this.firstPercentReleases = firstPercentReleases;
+    }
+
+    public GitHubBoundary() {
+
     }
 
     private String readAll(Reader rd) throws IOException {
@@ -177,6 +179,7 @@ public class GitHubBoundary {
         }
         LOGGER.log(Level.INFO, "Used releases {0}", releaseNames);
 
+        Collections.sort(finalReleases);
         return finalReleases;
     }
 
@@ -302,5 +305,25 @@ public class GitHubBoundary {
                 }
             }
         }
+    }
+
+    public ZonedDateTime getReleaseDate(String releaseName, File localPath) throws IOException {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss ZZ");
+
+        Process process = runtime.exec("git log -1 --format=%ai release-" + releaseName, null, localPath);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        ZonedDateTime dateTime;
+
+        String line;
+        while ((line = reader.readLine()) != null) {
+
+            if(line.length() > 0) {
+                dateTime = ZonedDateTime.parse(line, formatter);
+                return dateTime;
+            }
+        }
+
+        return ZonedDateTime.now();
     }
 }

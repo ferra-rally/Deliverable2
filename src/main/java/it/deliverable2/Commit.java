@@ -1,7 +1,5 @@
 package it.deliverable2;
 
-import org.json.JSONObject;
-
 import java.time.ZonedDateTime;
 import java.util.List;
 

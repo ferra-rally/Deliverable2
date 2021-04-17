@@ -265,6 +265,25 @@ public class GitHubBoundary {
         return this.getCommitFromUrl(url);
     }
 
+    public int getLinesOfCode(Release release, RepoFile repoFile, File localPath) throws IOException {
+
+        Process process = runtime.exec("git show " + release.getFullName() + ":" + repoFile.getFilename(), null, localPath);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        StringBuilder stringBuilder = new StringBuilder();
+        String line;
+        int loc = 0;
+        while((line = reader.readLine()) != null) {
+            stringBuilder.append(line);
+            stringBuilder.append("\n");
+            loc++;
+        }
+
+        String[] lines = stringBuilder.toString().split("\r\n|\r|\n");
+
+        return lines.length;
+    }
+
     public void setReleaseFiles(List<Release> releases, File localPath) throws IOException {
         //Get file of release
         for (Release rel : releases) {
@@ -272,11 +291,17 @@ public class GitHubBoundary {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             List<RepoFile> releaseFileList = new ArrayList<>();
 
+
+            LOGGER.log(Level.INFO, "Checking {0} files", rel.getName());
             //Track only .java files
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.contains(".java")) {
-                    releaseFileList.add(new RepoFile(line));
+                    RepoFile repoFile = new RepoFile(line);
+
+                    repoFile.setLoc(getLinesOfCode(rel, repoFile, localPath));
+
+                    releaseFileList.add(repoFile);
                 }
             }
 

@@ -9,6 +9,7 @@ public class RepoFile {
     private int addition;
     private int deletion;
     private int changes;
+    private int loc;
 
     public RepoFile(String sha, String filename) {
         this.sha = sha;
@@ -77,5 +78,13 @@ public class RepoFile {
         } else {
             return "No";
         }
+    }
+
+    public int getLoc() {
+        return loc;
+    }
+
+    public void setLoc(int loc) {
+        this.loc = loc;
     }
 }

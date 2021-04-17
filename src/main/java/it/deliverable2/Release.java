@@ -116,7 +116,7 @@ public class Release implements Comparable<Release>{
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Release release = (Release) o;
-        return number == release.number && Objects.equals(commitUrl, release.commitUrl) && Objects.equals(name, release.name) && Objects.equals(fullName, release.fullName) && Objects.equals(commit, release.commit) && Objects.equals(fileList, release.fileList) && Objects.equals(commits, release.commits) && Objects.equals(date, release.date);
+        return number == release.number && Objects.equals(name, release.name) && Objects.equals(date, release.date);
     }
 
     @Override

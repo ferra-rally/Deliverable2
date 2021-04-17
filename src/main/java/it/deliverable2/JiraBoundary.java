@@ -12,31 +12,25 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class JiraBoundary {
-    private List<Release> releases;
-    private List<Release> allReleases;
+    private static final Logger LOGGER = Logger.getLogger(JiraBoundary.class.getName());
 
-    private static final Logger LOGGER = Logger.getLogger( JiraBoundary.class.getName() );
+    private Release findRelease(ZonedDateTime dateTime, List<Release> allReleases) {
+        Release prev = allReleases.get(0);
 
-    private String findRelease(ZonedDateTime dateTime) {
-        Release prev = releases.get(0);
-
-        for(Release rel : releases) {
-            if(dateTime.isAfter(rel.getDate())) {
-                return prev.getName();
+        for (Release rel : allReleases) {
+            if (dateTime.isAfter(rel.getDate())) {
+                return prev;
             }
 
             prev = rel;
         }
 
-        return "";
+        return prev;
     }
 
     private String readAll(Reader rd) throws IOException {
@@ -57,11 +51,19 @@ public class JiraBoundary {
         }
     }
 
-    public List<Issue> getBugs(String projName) throws IOException {
+    public List<Issue> getBugs(String projName, List<Release> allReleases) throws IOException {
         List<Issue> issuesList = new ArrayList<>();
+
+        //Create a map with all releases
+        Map<String , Release> releaseMap = new HashMap<>();
+        for(Release rel : allReleases) {
+            releaseMap.put(rel.getName(), rel);
+        }
+
         int i = 0;
         int j;
         int total;
+
         do {
             j = i + 1000;
 
@@ -79,19 +81,19 @@ public class JiraBoundary {
                 JSONArray affectedVersionArray = fieldsObject.getJSONArray("versions");
                 JSONArray fixVersionArray = fieldsObject.getJSONArray("fixVersions");
 
-                List<String> affectedVersions = new ArrayList<>();
-                List<String> fixedVersion = new ArrayList<>();
+                List<Release> affectedVersions = new ArrayList<>();
+                List<Release> fixedVersion = new ArrayList<>();
 
                 //Get affected versions
-                for(int x = 0; x < affectedVersionArray.length(); x++) {
+                for (int x = 0; x < affectedVersionArray.length(); x++) {
                     String version = affectedVersionArray.getJSONObject(x).getString("name");
-                    affectedVersions.add(version);
+                    affectedVersions.add(releaseMap.get(version));
                 }
 
                 //Get fixed versions
-                for(int x = 0; x < fixVersionArray.length(); x++) {
+                for (int x = 0; x < fixVersionArray.length(); x++) {
                     String version = fixVersionArray.getJSONObject(x).getString("name");
-                    fixedVersion.add(version);
+                    fixedVersion.add(releaseMap.get(version));
                 }
 
                 String dateString = fieldsObject.getString("resolutiondate");
@@ -104,12 +106,13 @@ public class JiraBoundary {
                 ZonedDateTime resolutionDate = ZonedDateTime.parse(dateString, formatter);
 
                 //Use date to find fixed version
-                if(fixedVersion.isEmpty()) {
-                    fixedVersion.add(findRelease(resolutionDate));
+                if (fixedVersion.isEmpty()) {
+                    fixedVersion.add(findRelease(resolutionDate, allReleases));
                 }
 
                 //Do not consider issue with same injected and fixed version
-                if(affectedVersions.size() == fixedVersion.size() && affectedVersions.get(0).equals(fixedVersion.get(0))) continue;
+                if (affectedVersions.size() == fixedVersion.size() && affectedVersions.get(0).equals(fixedVersion.get(0)))
+                    continue;
 
                 Issue issue = new Issue(jsonObject.getString("key"), affectedVersions, fixedVersion, resolutionDate);
                 issuesList.add(issue);
@@ -119,9 +122,26 @@ public class JiraBoundary {
         return issuesList;
     }
 
-    public List<Release> getReleases(String projName, double firstPercentReleases, File localPath) throws IOException {
-        List<Release> releasesList = new ArrayList<>();
+    public List<Release> getFirstPercentOfReleases(List<Release> releases, double firstPercentReleases) {
         List<Release> croppedReleasesList = new ArrayList<>();
+
+        int number = (int) Math.floor(releases.size() * (1 - firstPercentReleases));
+
+        for (int i = 0; i < number; i++) {
+            croppedReleasesList.add(releases.get(i));
+        }
+
+        List<String> releaseNames = new ArrayList<>();
+        for (Release rel : croppedReleasesList) {
+            releaseNames.add(rel.getName());
+        }
+        LOGGER.log(Level.INFO, "Used releases {0}", releaseNames);
+
+        return croppedReleasesList;
+    }
+
+    public List<Release> getReleases(String projName, File localPath) throws IOException {
+        List<Release> releasesList = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         String url = "https://issues.apache.org/jira/rest/api/2/project/" + projName.toUpperCase(Locale.ROOT);
@@ -129,12 +149,12 @@ public class JiraBoundary {
         JSONObject result = this.readJsonFromUrl(url);
         JSONArray versions = result.getJSONArray("versions");
 
-        for(int i = 0; i < versions.length(); i++) {
+        for (int i = 0; i < versions.length(); i++) {
             JSONObject versionJSON = versions.getJSONObject(i);
             String name = versionJSON.getString("name");
             ZonedDateTime zonedDateTime;
 
-            if(versionJSON.isNull("releaseDate")) {
+            if (versionJSON.isNull("releaseDate")) {
                 zonedDateTime = new GitHubBoundary().getReleaseDate(name, localPath);
             } else {
                 String dateString = versionJSON.getString("releaseDate");
@@ -148,35 +168,22 @@ public class JiraBoundary {
             releasesList.add(release);
         }
 
+        //Order releases
         Collections.sort(releasesList);
 
-        for(int i = 0; i < releasesList.size(); i++) {
-            releasesList.get(i).setNumber(i + 1);
-        }
-
-        int number = (int) Math.floor(releasesList.size() * (1 - firstPercentReleases));
-
-        for(int i = 0; i < number; i++) {
-            croppedReleasesList.add(releasesList.get(i));
+        for (int i = 0; i < releasesList.size(); i++) {
+            Release rel = releasesList.get(i);
+            rel.setNumber(i + 1);
         }
 
         //DEBUG show all releases and used releases
         List<String> releaseNames = new ArrayList<>();
-        for(Release rel : releasesList) {
+        for (Release rel : releasesList) {
             releaseNames.add(rel.getName());
         }
         LOGGER.log(Level.INFO, "All releases {0}", releaseNames);
 
-        releaseNames = new ArrayList<>();
-        for(Release rel : croppedReleasesList) {
-            releaseNames.add(rel.getName());
-        }
-        LOGGER.log(Level.INFO, "Used releases {0}", releaseNames);
-
-        this.releases = croppedReleasesList;
-        this.allReleases = releasesList;
-
-        return croppedReleasesList;
+        return releasesList;
     }
 
 }

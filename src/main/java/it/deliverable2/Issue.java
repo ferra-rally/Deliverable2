@@ -5,12 +5,12 @@ import java.util.List;
 
 public class Issue {
     private String name;
-    private String injectVersion;
-    private String fixVersion;
+    private Release injectVersion;
+    private Release fixVersion;
     private ZonedDateTime resolutionDate;
     private List<RepoFile> affects;
 
-    public Issue(String name, List<String> affected, List<String> fixed, ZonedDateTime resolutionDate) {
+    public Issue(String name, List<Release> affected, List<Release> fixed, ZonedDateTime resolutionDate) {
         this.name = name;
         this.resolutionDate = resolutionDate;
 
@@ -18,7 +18,7 @@ public class Issue {
             this.fixVersion = fixed.get(0);
 
             for(int i = 1; i < fixed.size(); i++) {
-                if(!Utils.compareVersionString(this.fixVersion, fixed.get(i))) this.fixVersion = fixed.get(i);
+                if(this.fixVersion.compareTo(fixed.get(i)) < 0) this.fixVersion = fixed.get(i);
             }
         }
 
@@ -26,7 +26,7 @@ public class Issue {
             this.injectVersion = affected.get(0);
 
             for(int i = 1; i < affected.size(); i++) {
-                if(Utils.compareVersionString(this.injectVersion, affected.get(i))) this.injectVersion = affected.get(i);
+                if(this.injectVersion.compareTo(affected.get(i)) > 0) this.injectVersion = affected.get(i);
             }
         }
     }
@@ -47,19 +47,19 @@ public class Issue {
         this.affects = affects;
     }
 
-    public String getInjectVersion() {
+    public Release getInjectVersion() {
         return injectVersion;
     }
 
-    public void setInjectVersion(String injectVersion) {
+    public void setInjectVersion(Release injectVersion) {
         this.injectVersion = injectVersion;
     }
 
-    public String getFixVersion() {
+    public Release getFixVersion() {
         return fixVersion;
     }
 
-    public void setFixVersion(String fixVersion) {
+    public void setFixVersion(Release fixVersion) {
         this.fixVersion = fixVersion;
     }
 

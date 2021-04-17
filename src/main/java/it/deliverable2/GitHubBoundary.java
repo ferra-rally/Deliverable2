@@ -153,7 +153,6 @@ public class GitHubBoundary {
             rel.setNumber(releases.size() - i);
         }
 
-        //TODO è giusto?
         int number = (int) Math.ceil(releases.size() * (1 - firstPercentReleases));
 
         //Invert order and set commit
@@ -254,7 +253,6 @@ public class GitHubBoundary {
 
             } else {
                 LOGGER.log(Level.WARNING, "Multiple results found for commit {0}", name);
-                JSONArray results = searchResults.getJSONArray("items");
             }
         }
 
@@ -294,7 +292,7 @@ public class GitHubBoundary {
 
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.contains("commit")) {
+                if (line.contains(COMMIT_STRING)) {
                     String sha = line.split(" ")[1];
                     if (!sha.isEmpty()) {
                         Commit commit = getCommitFromSha(sha);

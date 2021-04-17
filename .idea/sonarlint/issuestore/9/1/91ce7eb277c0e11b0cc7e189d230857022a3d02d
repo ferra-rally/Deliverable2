@@ -1,7 +1,5 @@
 
-^	java:S125”"<This block of commented-out lines of code should be removed.(ûÛ·Ğúÿÿÿÿ8¸Ï€Œ/
-X	java:S125'"<This block of commented-out lines of code should be removed.(œ²Ñî8ÇØÜßŒ/
-t
-java:S3776"RRefactor this method to reduce its Cognitive Complexity from 20 to the 15 allowed.(ˆÅˆùÿÿÿÿ8£ÄëûŒ/
-k
-java:S4042"NUse "java.nio.file.Files#delete" here for better messages on error conditions.(ê©àÅ8åÒè“Š/
+]	java:S125"<This block of commented-out lines of code should be removed.(Ê¯ÙÌùÿÿÿÿ8Ş«¹Ú/
+O
+java:S1135X"2Complete the task associated to this TODO comment.(Ñş¹ª8°ÅĞÛ/
+X	java:S125 "<This block of commented-out lines of code should be removed.(œ²Ñî8ÇØÜßŒ/

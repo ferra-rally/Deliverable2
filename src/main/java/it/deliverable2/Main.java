@@ -24,8 +24,8 @@ public class Main {
         JiraBoundary jiraBoundary = new JiraBoundary();
 
         LOGGER.log(Level.INFO, "Fetching releases...");
-        //List<Release> releases = gitHubBoundary.getReleases();
-        List<Release> releases = jiraBoundary.getReleases(projName, 0.5, localPath);
+        List<Release> allReleases = jiraBoundary.getReleases(projName, localPath);
+        List<Release> releases = jiraBoundary.getFirstPercentOfReleases(allReleases, 0.5);
         LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
 
         /*
@@ -79,25 +79,24 @@ public class Main {
 
         gitHubBoundary.setReleaseFiles(releases, localPath);
 
-        List<Issue> issues = jiraBoundary.getBugs("avro");
+        List<Issue> issues = jiraBoundary.getBugs("avro", allReleases);
 
         LOGGER.log(Level.INFO, "Setting issues files");
         gitHubBoundary.setIssueAffectFile(issues, localPath);
 
         //Assign bugs
-        //TODO use release compare
         for (Issue issue : issues) {
-            String injectVersion = issue.getInjectVersion();
-            String fixVersion = issue.getFixVersion();
+            Release injectVersion = issue.getInjectVersion();
+            Release fixVersion = issue.getFixVersion();
 
             boolean setBugs = false;
 
             for (int i = 0; i < releases.size(); i++) {
                 Release rel = releases.get(i);
 
-                if (rel.getName().equals(injectVersion)) {
+                if (rel.equals(injectVersion)) {
                     setBugs = true;
-                } else if (rel.getName().equals(fixVersion)) {
+                } else if (rel.equals(fixVersion)) {
                     break;
                 }
 

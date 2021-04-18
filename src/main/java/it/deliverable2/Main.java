@@ -15,6 +15,11 @@ public class Main {
 
     public static void main(String[] argv) throws IOException, GitAPIException {
 
+        //TODO git show 357b8fad6464ab25f8e03385ca54d1ce8ec63543 --shortstat --format="" to get stats
+        //TODO git log --  src/java/org/apache/avro/Protocol.java to get file change history
+        //TODO git show --shortstat --format="" 338db27462cbb442a60033f99fde7d92f863b28a -- lang/c++/test/DataFileTests.cc
+        //TODO git log --pretty=format:"{\"hash\":%H, \"commit_date\":%cd, \"author\":%an, \"message\":%s}"
+
         String projName = "avro";
         String projOwner = "apache";
 
@@ -26,45 +31,8 @@ public class Main {
         LOGGER.log(Level.INFO, "Fetching releases...");
         List<Release> allReleases = jiraBoundary.getReleases(projName, localPath);
         List<Release> releases = jiraBoundary.getFirstPercentOfReleases(allReleases, 0.5);
+        List<Commit> commitList = gitHubBoundary.getCommits(releases.get(releases.size() - 1).getDate(), localPath);
         LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
-
-        /*
-        LOGGER.log(Level.INFO, "Fetching commits...");
-        List<Commit> commits = gitHubBoundary.getCommits(projOwner, projName);
-        List<Commit> commitsForReleases = new ArrayList<>(commits);
-        LOGGER.log(Level.INFO, "Number of commits: {0}", commits.size());
-
-        LOGGER.log(Level.INFO, "Assigning commits to releases...");
-        for(Release rel : releases) {
-            LOGGER.log(Level.INFO, "Doing release {0}", rel.getName());
-            ZonedDateTime date = rel.getDate();
-
-            List<Commit> commitsOfRelease = new ArrayList<>();
-
-            //Assign commits to releases
-            for(Iterator<Commit> iterator = commitsForReleases.iterator(); iterator.hasNext(); ) {
-                Commit commit = iterator.next();
-                if(commit.getDate().isBefore(date)) {
-                    commitsOfRelease.add(commit);
-                    iterator.remove();
-                }
-            }
-
-            rel.setCommits(commitsOfRelease);
-            LOGGER.log(Level.INFO, "Release {0} with {1} of commits", new Object[]{rel.getName(), commitsOfRelease.size()});
-        }
-
-        //Get commits details
-        for(Release rel : releases) {
-            List<Commit> commitsOfRelease = rel.getCommits();
-
-            for(Commit commit : commitsOfRelease) {
-                JSONObject jsonObject = gitHubBoundary.readJsonFromUrlGitHub(commit.getCommitUrl());
-
-                commit.setJsonObject(jsonObject);
-            }
-        }
-        */
 
         if (!localPath.exists()) {
             LOGGER.log(Level.INFO, "Repository not found, downloading...");

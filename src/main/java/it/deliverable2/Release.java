@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Release implements Comparable<Release>{
+public class Release implements Comparable<Release> {
     private String commitUrl;
     private String name;
     private String fullName;
@@ -32,12 +32,14 @@ public class Release implements Comparable<Release>{
 
     public void setBugs(List<RepoFile> issueFiles) {
         List<String> issueFileNames = new ArrayList<>();
-        for(RepoFile file : issueFiles) {
+        for (RepoFile file : issueFiles) {
             issueFileNames.add(file.getFilename());
         }
 
-        for(RepoFile file : fileList) {
-            if(issueFileNames.contains(file.getFilename())) file.addBug();
+        for (RepoFile file : fileList) {
+            if (issueFileNames.contains(file.getFilename())) {
+                file.addBug();
+            }
         }
     }
 

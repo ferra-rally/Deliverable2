@@ -21,6 +21,8 @@ public class Commit {
     public Commit() {
     }
 
+    //public Commit(String sha, String name,)
+
     public Commit(String name, String message, String sha, ZonedDateTime date) {
         this.name = name;
         this.message = message;

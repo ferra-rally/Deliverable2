@@ -15,7 +15,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class GitHubBoundary {
-    //TODO git show release:filepath
 
     private static final String COMMIT_STRING = "commit";
     private static final Logger LOGGER = Logger.getLogger( GitHubBoundary.class.getName() );
@@ -272,11 +271,10 @@ public class GitHubBoundary {
 
         StringBuilder stringBuilder = new StringBuilder();
         String line;
-        int loc = 0;
+
         while((line = reader.readLine()) != null) {
             stringBuilder.append(line);
             stringBuilder.append("\n");
-            loc++;
         }
 
         String[] lines = stringBuilder.toString().split("\r\n|\r|\n");
@@ -348,5 +346,33 @@ public class GitHubBoundary {
         }
 
         return ZonedDateTime.now();
+    }
+
+    public List<Commit> getCommits(ZonedDateTime untilDate, File localPath) throws IOException {
+        List<Commit> commitList = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss ZZ");
+
+        Process process = runtime.exec("git log --pretty=format:\"%H###%ci###%an###%s\" --before=" + untilDate, null, localPath);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        String line;
+        while((line = reader.readLine()) != null) {
+
+            String[] tokens = line.split("###");
+
+            String sha = tokens[0];
+            String dateString = tokens[1];
+            String author  = tokens[2];
+            String message = tokens[3];
+
+            ZonedDateTime dateTime = ZonedDateTime.parse(dateString, formatter);
+
+            Commit commit = new Commit(getCommitName(message), message, sha, dateTime);
+            commit.setAuthor(author);
+
+            commitList.add(commit);
+        }
+
+        return commitList;
     }
 }

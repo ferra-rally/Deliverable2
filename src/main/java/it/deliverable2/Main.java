@@ -15,10 +15,10 @@ public class Main {
 
     public static void main(String[] argv) throws IOException, GitAPIException {
 
-        //TODO git show 357b8fad6464ab25f8e03385ca54d1ce8ec63543 --shortstat --format="" to get stats
-        //TODO git log --  src/java/org/apache/avro/Protocol.java to get file change history
-        //TODO git show --shortstat --format="" 338db27462cbb442a60033f99fde7d92f863b28a -- lang/c++/test/DataFileTests.cc
-        //TODO git log --pretty=format:"{\"hash\":%H, \"commit_date\":%cd, \"author\":%an, \"message\":%s}"
+        // git show 357b8fad6464ab25f8e03385ca54d1ce8ec63543 --shortstat --format="" to get stats
+        // git log --  src/java/org/apache/avro/Protocol.java to get file change history
+        // git show --shortstat --format="" 338db27462cbb442a60033f99fde7d92f863b28a -- lang/c++/test/DataFileTests.cc
+        // git log --pretty=format:"{\"hash\":%H, \"commit_date\":%cd, \"author\":%an, \"message\":%s}"
 
         String projName = "avro";
         String projOwner = "apache";
@@ -45,7 +45,7 @@ public class Main {
             LOGGER.log(Level.INFO, "Download complete");
         }
 
-        gitHubBoundary.setReleaseFiles(releases, localPath);
+        gitHubBoundary.assignFilesToReleases(releases, commitList, localPath);
 
         List<Issue> issues = jiraBoundary.getBugs("avro", allReleases);
 
@@ -59,9 +59,7 @@ public class Main {
 
             boolean setBugs = false;
 
-            for (int i = 0; i < releases.size(); i++) {
-                Release rel = releases.get(i);
-
+            for (Release rel : releases) {
                 if (rel.equals(injectVersion)) {
                     setBugs = true;
                 } else if (rel.equals(fixVersion)) {

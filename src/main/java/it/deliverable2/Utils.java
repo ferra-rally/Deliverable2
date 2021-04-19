@@ -37,13 +37,13 @@ public class Utils {
     public static void writeCsv(String projName, String projOwner, List<Release> releases) {
         //Write output in csv
         try (FileWriter outWriter = new FileWriter(projName + "_" + projOwner + "_out.csv")) {
-            outWriter.write("Release, Filename, LOC, Buggy\n");
+            outWriter.write("Release, Filename, LOC, LOC_touched, NR, NAuth, Buggy\n");
             for (Release rel : releases) {
                 int number = rel.getNumber();
                 List<RepoFile> fileList = rel.getFileList();
 
                 for (RepoFile file : fileList) {
-                    outWriter.write(number + "," + file.getFilename() + "," + file.getLoc() + "," + file.isBuggy() + "\n");
+                    outWriter.write(number + "," + file.getFilename() + "," + file.getLoc() + "," + file.getChanges() + "," + file.getNumOfRevision()+ "," + file.getNumOfAuthors() + "," + file.isBuggy() + "\n");
                 }
             }
         } catch (IOException e) {

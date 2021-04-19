@@ -46,7 +46,8 @@ public class GitHubBoundary {
     private String getCommitName(String message) {
         String name;
         if(message.startsWith(this.projName.toUpperCase(Locale.ROOT))) {
-            name = message.split(": .")[0];
+            //Split names
+            name = message.split("[: .]")[0];
         } else {
             name = message;
         }
@@ -109,7 +110,7 @@ public class GitHubBoundary {
 
         ZonedDateTime dateTime = ZonedDateTime.parse(commitJSONObject.getJSONObject("committer").getString("date"));
         Commit commit = new Commit(name, message, jsonCommit.getString("sha"), dateTime);
-        commit.setRepoFileList(fileList);
+        commit.setTouchedFiles(fileList);
         return commit;
     }
 
@@ -264,9 +265,9 @@ public class GitHubBoundary {
         return this.getCommitFromUrl(url);
     }
 
-    public int getLinesOfCode(Release release, RepoFile repoFile, File localPath) throws IOException {
+    public int getLinesOfCode(Release release, String filename, File localPath) throws IOException {
 
-        Process process = runtime.exec("git show " + release.getFullName() + ":" + repoFile.getFilename(), null, localPath);
+        Process process = runtime.exec("git show " + release.getFullName() + ":" + filename, null, localPath);
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
         StringBuilder stringBuilder = new StringBuilder();
@@ -282,28 +283,76 @@ public class GitHubBoundary {
         return lines.length;
     }
 
-    public void setReleaseFiles(List<Release> releases, File localPath) throws IOException {
-        //Get file of release
-        for (Release rel : releases) {
+    public List<String> getReleaseFileList(Release rel, File localPath) throws IOException {
+        List<String> releaseFileList = new ArrayList<>();
+
             Process process = runtime.exec("git ls-tree -r " + rel.getFullName() + " --name-only", null, localPath);
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            List<RepoFile> releaseFileList = new ArrayList<>();
-
 
             LOGGER.log(Level.INFO, "Checking {0} files", rel.getName());
             //Track only .java files
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.contains(".java")) {
-                    RepoFile repoFile = new RepoFile(line);
-
-                    repoFile.setLoc(getLinesOfCode(rel, repoFile, localPath));
-
-                    releaseFileList.add(repoFile);
+                    releaseFileList.add(line);
                 }
             }
 
-            rel.setFileList(releaseFileList);
+
+        return releaseFileList;
+    }
+
+    private void setTouchedFile(List<Commit> commitList, Map<String, RepoFile> fileMap) {
+        for(Commit commit : commitList) {
+            List<RepoFile> touchedFiles = commit.getTouchedFiles();
+
+            for(RepoFile file : touchedFiles) {
+                String filename = file.getFilename();
+                if(fileMap.containsKey(filename)) {
+                    RepoFile repoFile = fileMap.get(filename);
+
+                    repoFile.addAdded(file.getAddition());
+                    repoFile.addDeletion(file.getDeletion());
+                    repoFile.addAuthor(commit.getAuthor());
+                    repoFile.addRevision();
+                }
+            }
+        }
+    }
+
+    //Assign files to release
+    public void assignFilesToReleases(List<Release> releases, List<Commit> commitList, File localPath) throws IOException {
+        for(Release rel : releases) {
+
+            Map<String, RepoFile> fileMap = new HashMap<>();
+
+            //Get all release files
+            for(String filename : getReleaseFileList(rel, localPath)) {
+                fileMap.put(filename, new RepoFile(filename));
+            }
+
+            List<Commit> commitsOfRelease = new ArrayList<>();
+
+            //Assign commits to releases
+            for(Iterator<Commit> iterator = commitList.iterator(); iterator.hasNext(); ) {
+                Commit commit = iterator.next();
+                if (commit.getDate().isBefore(rel.getDate())) {
+                    commitsOfRelease.add(commit);
+                    iterator.remove();
+                }
+            }
+
+            //Set addition, deletion and authors
+            setTouchedFile(commitsOfRelease, fileMap);
+
+            //Set lines of code
+            for(RepoFile repoFile : fileMap.values()) {
+                repoFile.setLoc(getLinesOfCode(rel, repoFile.getFilename(), localPath));
+            }
+
+            rel.setCommits(commitsOfRelease);
+            rel.setFileMap(fileMap);
+            LOGGER.log(Level.INFO, "Release {0} has {1} commits", new Object[]{rel.getName(), commitsOfRelease.size()});
         }
     }
 
@@ -319,7 +368,7 @@ public class GitHubBoundary {
                     String sha = line.split(" ")[1];
                     if (!sha.isEmpty()) {
                         Commit commit = getCommitFromSha(sha);
-                        List<RepoFile> repoFileList = commit.getRepoFileList();
+                        List<RepoFile> repoFileList = commit.getTouchedFiles();
 
                         issue.setAffects(repoFileList);
                     }
@@ -352,26 +401,44 @@ public class GitHubBoundary {
         List<Commit> commitList = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss ZZ");
 
-        Process process = runtime.exec("git log --pretty=format:\"%H###%ci###%an###%s\" --before=" + untilDate, null, localPath);
+        Process process = runtime.exec("git log --numstat --pretty=format:Commit###%H###%ci###%an###%s --before=" + untilDate, null, localPath);
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        Commit prevCommit = new Commit();
 
         String line;
         while((line = reader.readLine()) != null) {
+            if(line.startsWith("Commit")) {
+                String[] tokens = line.split("###");
 
-            String[] tokens = line.split("###");
+                String sha = tokens[1];
+                String dateString = tokens[2];
+                String author = tokens[3];
+                String message = tokens[4];
 
-            String sha = tokens[0];
-            String dateString = tokens[1];
-            String author  = tokens[2];
-            String message = tokens[3];
+                ZonedDateTime dateTime = ZonedDateTime.parse(dateString, formatter);
 
-            ZonedDateTime dateTime = ZonedDateTime.parse(dateString, formatter);
+                Commit commit = new Commit(getCommitName(message), message, sha, dateTime);
+                commit.setAuthor(author);
 
-            Commit commit = new Commit(getCommitName(message), message, sha, dateTime);
-            commit.setAuthor(author);
+                prevCommit = commit;
+                commitList.add(commit);
+            } else {
+                if(!line.isEmpty() && line.contains(".java")) {
+                    String[] tokens = line.split("[\t]");
 
-            commitList.add(commit);
+                    int added = Integer.parseInt(tokens[0]);
+                    int deleted = Integer.parseInt(tokens[1]);
+                    String filename = tokens[2];
+
+                    RepoFile repoFile = new RepoFile(filename, added, deleted);
+                    prevCommit.addRepoFile(repoFile);
+                }
+            }
         }
+
+        //Order commits
+        Collections.sort(commitList);
 
         return commitList;
     }

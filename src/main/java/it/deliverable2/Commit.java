@@ -1,9 +1,11 @@
 package it.deliverable2;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-public class Commit {
+public class Commit implements Comparable<Commit>{
     private String name;
     private String message;
 
@@ -11,14 +13,13 @@ public class Commit {
     private String sha;
     private String author;
     private String commitUrl;
-    private List<RepoFile> repoFileList;
-    private int additions;
-    private int deletion;
+    private List<RepoFile> touchedFiles;
 
     //Commit Date
     private ZonedDateTime date;
 
     public Commit() {
+        this.touchedFiles = new ArrayList<>();
     }
 
     //public Commit(String sha, String name,)
@@ -28,6 +29,7 @@ public class Commit {
         this.message = message;
         this.sha = sha;
         this.date = date;
+        this.touchedFiles = new ArrayList<>();
     }
 
     public String getName() {
@@ -78,29 +80,33 @@ public class Commit {
         this.commitUrl = commitUrl;
     }
 
-    public List<RepoFile> getRepoFileList() {
-        return repoFileList;
+    public List<RepoFile> getTouchedFiles() {
+        return touchedFiles;
     }
 
-    public void setRepoFileList(List<RepoFile> repoFileList) {
-        this.repoFileList = repoFileList;
+    public void setTouchedFiles(List<RepoFile> touchedFiles) {
+        this.touchedFiles = touchedFiles;
     }
 
-    public int getAdditions() {
-        return additions;
+    public void addRepoFile(RepoFile repoFile) {
+        this.touchedFiles.add(repoFile);
     }
 
-    public void setAdditions(int additions) {
-        this.additions = additions;
+    @Override
+    public int compareTo(Commit commit) {
+        return getDate().compareTo(commit.getDate());
     }
 
-    public int getDeletion() {
-        return deletion;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Commit commit = (Commit) o;
+        return Objects.equals(sha, commit.sha);
     }
 
-    public void setDeletion(int deletion) {
-        this.deletion = deletion;
+    @Override
+    public int hashCode() {
+        return Objects.hash(sha);
     }
-
-
 }

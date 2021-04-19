@@ -1,9 +1,7 @@
 package it.deliverable2;
 
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class Release implements Comparable<Release> {
     private String commitUrl;
@@ -13,6 +11,7 @@ public class Release implements Comparable<Release> {
     //Commit of the tag
     private Commit commit;
     private List<RepoFile> fileList;
+    private Map<String, RepoFile> fileMap;
 
     private List<Commit> commits;
     private ZonedDateTime date;
@@ -56,7 +55,6 @@ public class Release implements Comparable<Release> {
     }
 
     public void setName(String name) {
-        //this.name = name.split("-")[1];
         this.name = name;
     }
 
@@ -104,8 +102,14 @@ public class Release implements Comparable<Release> {
         return fileList;
     }
 
-    public void setFileList(List<RepoFile> fileList) {
-        this.fileList = fileList;
+    public void setFileMap(Map<String, RepoFile> fileMap) {
+        this.fileMap = fileMap;
+
+        this.fileList = new ArrayList<>(fileMap.values());
+    }
+
+    public Map<String, RepoFile> getFileMap() {
+        return fileMap;
     }
 
     @Override

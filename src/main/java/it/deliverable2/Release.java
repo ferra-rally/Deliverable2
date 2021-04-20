@@ -10,8 +10,8 @@ public class Release implements Comparable<Release> {
     private int number;
     //Commit of the tag
     private Commit commit;
-    private List<RepoFile> fileList;
-    private Map<String, RepoFile> fileMap;
+    private List<ReleaseFile> fileList;
+    private Map<String, ReleaseFile> fileMap;
 
     private List<Commit> commits;
     private ZonedDateTime date;
@@ -29,13 +29,13 @@ public class Release implements Comparable<Release> {
         this.fullName = "release-" + this.name;
     }
 
-    public void setBugs(List<RepoFile> issueFiles) {
+    public void setBugs(List<CommitFile> issueFiles) {
         List<String> issueFileNames = new ArrayList<>();
-        for (RepoFile file : issueFiles) {
+        for (CommitFile file : issueFiles) {
             issueFileNames.add(file.getFilename());
         }
 
-        for (RepoFile file : fileList) {
+        for (ReleaseFile file : fileList) {
             if (issueFileNames.contains(file.getFilename())) {
                 file.addBug();
             }
@@ -98,17 +98,17 @@ public class Release implements Comparable<Release> {
         this.fullName = fullName;
     }
 
-    public List<RepoFile> getFileList() {
+    public List<ReleaseFile> getFileList() {
         return fileList;
     }
 
-    public void setFileMap(Map<String, RepoFile> fileMap) {
+    public void setFileMap(Map<String, ReleaseFile> fileMap) {
         this.fileMap = fileMap;
 
         this.fileList = new ArrayList<>(fileMap.values());
     }
 
-    public Map<String, RepoFile> getFileMap() {
+    public Map<String, ReleaseFile> getFileMap() {
         return fileMap;
     }
 

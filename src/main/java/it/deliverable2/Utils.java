@@ -40,9 +40,9 @@ public class Utils {
             outWriter.write("Release, Filename, LOC, LOC_touched, NR, NAuth, Buggy\n");
             for (Release rel : releases) {
                 int number = rel.getNumber();
-                List<RepoFile> fileList = rel.getFileList();
+                List<ReleaseFile> fileList = rel.getFileList();
 
-                for (RepoFile file : fileList) {
+                for (ReleaseFile file : fileList) {
                     outWriter.write(number + "," + file.getFilename() + "," + file.getLoc() + "," + file.getChanges() + "," + file.getNumOfRevision()+ "," + file.getNumOfAuthors() + "," + file.isBuggy() + "\n");
                 }
             }

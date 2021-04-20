@@ -101,11 +101,11 @@ public class GitHubBoundary {
         name = getCommitName(message);
 
         JSONArray fileArray = jsonCommit.getJSONArray("files");
-        List<RepoFile> fileList = new ArrayList<>();
+        List<CommitFile> fileList = new ArrayList<>();
 
         for(int i = 0; i < fileArray.length(); i++) {
             JSONObject obj = fileArray.getJSONObject(i);
-            fileList.add(new RepoFile(obj));
+            fileList.add(new CommitFile(obj));
         }
 
         ZonedDateTime dateTime = ZonedDateTime.parse(commitJSONObject.getJSONObject("committer").getString("date"));
@@ -302,19 +302,19 @@ public class GitHubBoundary {
         return releaseFileList;
     }
 
-    private void setTouchedFile(List<Commit> commitList, Map<String, RepoFile> fileMap) {
+    private void setTouchedFile(List<Commit> commitList, Map<String, ReleaseFile> fileMap) {
         for(Commit commit : commitList) {
-            List<RepoFile> touchedFiles = commit.getTouchedFiles();
+            List<CommitFile> touchedFiles = commit.getTouchedFiles();
 
-            for(RepoFile file : touchedFiles) {
+            for(CommitFile file : touchedFiles) {
                 String filename = file.getFilename();
                 if(fileMap.containsKey(filename)) {
-                    RepoFile repoFile = fileMap.get(filename);
+                    ReleaseFile releaseFile = fileMap.get(filename);
 
-                    repoFile.addAdded(file.getAddition());
-                    repoFile.addDeletion(file.getDeletion());
-                    repoFile.addAuthor(commit.getAuthor());
-                    repoFile.addRevision();
+                    releaseFile.addAdded(file.getAddition());
+                    releaseFile.addDeletion(file.getDeletion());
+                    releaseFile.addAuthor(commit.getAuthor());
+                    releaseFile.addRevision();
                 }
             }
         }
@@ -324,11 +324,11 @@ public class GitHubBoundary {
     public void assignFilesToReleases(List<Release> releases, List<Commit> commitList, File localPath) throws IOException {
         for(Release rel : releases) {
 
-            Map<String, RepoFile> fileMap = new HashMap<>();
+            Map<String, ReleaseFile> fileMap = new HashMap<>();
 
             //Get all release files
             for(String filename : getReleaseFileList(rel, localPath)) {
-                fileMap.put(filename, new RepoFile(filename));
+                fileMap.put(filename, new ReleaseFile(filename));
             }
 
             List<Commit> commitsOfRelease = new ArrayList<>();
@@ -346,8 +346,8 @@ public class GitHubBoundary {
             setTouchedFile(commitsOfRelease, fileMap);
 
             //Set lines of code
-            for(RepoFile repoFile : fileMap.values()) {
-                repoFile.setLoc(getLinesOfCode(rel, repoFile.getFilename(), localPath));
+            for(ReleaseFile releaseFile : fileMap.values()) {
+                releaseFile.setLoc(getLinesOfCode(rel, releaseFile.getFilename(), localPath));
             }
 
             rel.setCommits(commitsOfRelease);
@@ -368,9 +368,9 @@ public class GitHubBoundary {
                     String sha = line.split(" ")[1];
                     if (!sha.isEmpty()) {
                         Commit commit = getCommitFromSha(sha);
-                        List<RepoFile> repoFileList = commit.getTouchedFiles();
+                        List<CommitFile> commitFileList = commit.getTouchedFiles();
 
-                        issue.setAffects(repoFileList);
+                        issue.setAffects(commitFileList);
                     }
                 }
             }
@@ -431,8 +431,8 @@ public class GitHubBoundary {
                     int deleted = Integer.parseInt(tokens[1]);
                     String filename = tokens[2];
 
-                    RepoFile repoFile = new RepoFile(filename, added, deleted);
-                    prevCommit.addRepoFile(repoFile);
+                    CommitFile commitFile = new CommitFile(filename, added, deleted);
+                    prevCommit.addRepoFile(commitFile);
                 }
             }
         }

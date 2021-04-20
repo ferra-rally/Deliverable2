@@ -8,7 +8,7 @@ public class Issue {
     private Release injectVersion;
     private Release fixVersion;
     private ZonedDateTime resolutionDate;
-    private List<RepoFile> affects;
+    private List<CommitFile> affects;
 
     public Issue(String name, List<Release> affected, List<Release> fixed, ZonedDateTime resolutionDate) {
         this.name = name;
@@ -39,11 +39,11 @@ public class Issue {
         this.name = name;
     }
 
-    public List<RepoFile> getAffects() {
+    public List<CommitFile> getAffects() {
         return affects;
     }
 
-    public void setAffects(List<RepoFile> affects) {
+    public void setAffects(List<CommitFile> affects) {
         this.affects = affects;
     }
 

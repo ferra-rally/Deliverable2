@@ -13,7 +13,7 @@ public class Commit implements Comparable<Commit>{
     private String sha;
     private String author;
     private String commitUrl;
-    private List<RepoFile> touchedFiles;
+    private List<CommitFile> touchedFiles;
 
     //Commit Date
     private ZonedDateTime date;
@@ -80,16 +80,16 @@ public class Commit implements Comparable<Commit>{
         this.commitUrl = commitUrl;
     }
 
-    public List<RepoFile> getTouchedFiles() {
+    public List<CommitFile> getTouchedFiles() {
         return touchedFiles;
     }
 
-    public void setTouchedFiles(List<RepoFile> touchedFiles) {
+    public void setTouchedFiles(List<CommitFile> touchedFiles) {
         this.touchedFiles = touchedFiles;
     }
 
-    public void addRepoFile(RepoFile repoFile) {
-        this.touchedFiles.add(repoFile);
+    public void addRepoFile(CommitFile commitFile) {
+        this.touchedFiles.add(commitFile);
     }
 
     @Override

@@ -1,50 +1,41 @@
 package it.deliverable2;
 
-import org.json.JSONObject;
-
 import java.util.ArrayList;
 import java.util.List;
 
-public class RepoFile {
-    private String sha;
-    private String filename;
-    //Store number of bugs
+//Class that stores the release file info
+public class ReleaseFile {
     private int bugs = 0;
-    private int addition = 0;
-    private int deletion = 0;
-    //TODO is this modified  or is (addition - deletion) ??
     private int loc;
+    //TODO is this modified  or is (addition - deletion) ??
+    private int addition;
+    private int deletion;
+    private String filename;
     private int numOfRevision = 0;
     private List<String> authorList;
 
-    public RepoFile(String sha, String filename) {
-        this.sha = sha;
+    public ReleaseFile(String filename) {
         this.filename = filename;
     }
 
-    public RepoFile(String filename) {
-        this.filename = filename;
+    public String isBuggy() {
+        if(bugs > 0) {
+            return "Yes";
+        } else {
+            return "No";
+        }
     }
 
-    public RepoFile(String filename, int addition, int deletion) {
-        this.filename = filename;
-        this.addition = addition;
-        this.deletion = deletion;
+    public int getLoc() {
+        return loc;
     }
 
-    public RepoFile(JSONObject jsonObject) {
-        sha = jsonObject.getString("sha");
-        filename = jsonObject.getString("filename");
-        addition = jsonObject.getInt("additions");
-        deletion = jsonObject.getInt("deletions");
+    public void setLoc(int loc) {
+        this.loc = loc;
     }
 
-    public String getSha() {
-        return sha;
-    }
-
-    public void setSha(String sha) {
-        this.sha = sha;
+    public void addBug() {
+        this.bugs++;
     }
 
     public String getFilename() {
@@ -73,26 +64,6 @@ public class RepoFile {
 
     public int getChanges() {
         return addition + deletion;
-    }
-
-    public void addBug() {
-        this.bugs++;
-    }
-
-    public String isBuggy() {
-        if(bugs > 0) {
-            return "Yes";
-        } else {
-            return "No";
-        }
-    }
-
-    public int getLoc() {
-        return loc;
-    }
-
-    public void setLoc(int loc) {
-        this.loc = loc;
     }
 
     public int getNumOfRevision() {

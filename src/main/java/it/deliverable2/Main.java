@@ -30,6 +30,8 @@ public class Main {
 
         LOGGER.log(Level.INFO, "Fetching releases...");
         List<Release> allReleases = jiraBoundary.getReleases(projName, localPath);
+        List<Issue> issues = jiraBoundary.getBugs("avro", allReleases);
+
         List<Release> releases = jiraBoundary.getFirstPercentOfReleases(allReleases, 0.5);
         List<Commit> commitList = gitHubBoundary.getCommits(releases.get(releases.size() - 1).getDate(), localPath);
         LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
@@ -47,7 +49,7 @@ public class Main {
 
         gitHubBoundary.assignFilesToReleases(releases, commitList, localPath);
 
-        List<Issue> issues = jiraBoundary.getBugs("avro", allReleases);
+
 
         LOGGER.log(Level.INFO, "Setting issues files");
         gitHubBoundary.setIssueAffectFile(issues, localPath);

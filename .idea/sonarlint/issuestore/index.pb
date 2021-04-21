@@ -12,8 +12,6 @@ Z
 .gitignore,a\5\a5cc2925ca8258af241be7e5b0381edf30266302
 X
 (src/main/java/it/deliverable2/Issue.java,5\5\5500318d2f945cc13e4163c196381e32e4afc710
-[
-+src/main/java/it/deliverable2/RepoFile.java,9\6\96e06522c51879cf2d48ea3ca4144ba93905f75a
 a
 1src/main/java/it/deliverable2/GitHubBoundary.java,1\e\1e2143c384167203263cc06f669a5327ca9bde63
 _
@@ -22,3 +20,7 @@ C
 avro_apache_out.csv,1\5\152737745d666a7f0998b35905215bea5957f024
 X
 (src/main/java/it/deliverable2/Utils.java,0\4\04ed0c3cb3895716d9bd8439e05db5a91185953c
+]
+-src/main/java/it/deliverable2/CommitFile.java,4\9\49578525e7ef546eefe2aa3454979a656c621651
+^
+.src/main/java/it/deliverable2/ReleaseFile.java,0\5\057c606c377a49e19ed0fd18e957cafcd9fe03b2

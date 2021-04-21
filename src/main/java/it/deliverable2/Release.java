@@ -59,7 +59,10 @@ public class Release implements Comparable<Release> {
     }
 
     public int getNumber() {
-        return number;
+        if(number >= 0) {
+            return number;
+        }
+        return -1;
     }
 
     public void setNumber(int number) {

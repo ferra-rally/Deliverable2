@@ -7,28 +7,16 @@ public class Issue {
     private String name;
     private Release injectVersion;
     private Release fixVersion;
+    private Release openingVersion;
     private ZonedDateTime resolutionDate;
     private List<CommitFile> affects;
 
-    public Issue(String name, List<Release> affected, List<Release> fixed, ZonedDateTime resolutionDate) {
+    public Issue(String name, Release injectVersion, Release fixVersion, Release openingVersion, ZonedDateTime resolutionDate) {
         this.name = name;
         this.resolutionDate = resolutionDate;
-
-        if(!fixed.isEmpty()) {
-            this.fixVersion = fixed.get(0);
-
-            for(int i = 1; i < fixed.size(); i++) {
-                if(this.fixVersion.compareTo(fixed.get(i)) < 0) this.fixVersion = fixed.get(i);
-            }
-        }
-
-        if(!affected.isEmpty()) {
-            this.injectVersion = affected.get(0);
-
-            for(int i = 1; i < affected.size(); i++) {
-                if(this.injectVersion.compareTo(affected.get(i)) > 0) this.injectVersion = affected.get(i);
-            }
-        }
+        this.fixVersion = fixVersion;
+        this.injectVersion = injectVersion;
+        this.openingVersion = openingVersion;
     }
 
     public String getName() {
@@ -69,5 +57,13 @@ public class Issue {
 
     public void setResolutionDate(ZonedDateTime resolutionDate) {
         this.resolutionDate = resolutionDate;
+    }
+
+    public Release getOpeningVersion() {
+        return openingVersion;
+    }
+
+    public void setOpeningVersion(Release openingVersion) {
+        this.openingVersion = openingVersion;
     }
 }

@@ -21,10 +21,13 @@ public class JiraBoundary {
 
     private Release findRelease(ZonedDateTime dateTime, List<Release> allReleases) {
         Release prev = allReleases.get(0);
+        for (int i = 0; i < allReleases.size(); i++) {
+            Release rel = allReleases.get(i);
 
-        for (Release rel : allReleases) {
             if (dateTime.isAfter(rel.getDate())) {
                 return prev;
+            } else if(i == allReleases.size() - 1) {
+                return allReleases.get(allReleases.size() - 1);
             }
 
             prev = rel;
@@ -51,8 +54,78 @@ public class JiraBoundary {
         }
     }
 
+    //Get the last fixed version if there are multiple
+    private Release findFixed(List<Release> fixedList) {
+        Release fixVersion = null;
+
+        if(!fixedList.isEmpty()) {
+            fixVersion = fixedList.get(0);
+
+            for(int i = 1; i < fixedList.size(); i++) {
+                if(fixVersion.compareTo(fixedList.get(i)) < 0) fixVersion = fixedList.get(i);
+            }
+        }
+
+        return fixVersion;
+    }
+
+    //Get the first affected version if there are multiple
+    private Release findInjected(List<Release> affectedList) {
+        Release injectVersion = null;
+
+        if(!affectedList.isEmpty()) {
+            injectVersion = affectedList.get(0);
+
+            for(int i = 1; i < affectedList.size(); i++) {
+                if(injectVersion.compareTo(affectedList.get(i)) > 0) injectVersion = affectedList.get(i);
+            }
+        }
+
+        return injectVersion;
+    }
+
+    private void addProportion(Release injected, Release opening, Release fixed, List<Double> proportionList) {
+        int fixedNumber = fixed.getNumber();
+        int injectedNumber = injected.getNumber();
+        int openingNumber = opening.getNumber();
+
+        //Invalid proportion
+        if(openingNumber >= fixedNumber) {
+            return;
+        }
+
+        double proportion =  (fixedNumber * 1.0 - injectedNumber)/(fixedNumber - openingNumber);
+        if(Double.isFinite(proportion) && proportion > 0) {
+
+            int index = Collections.binarySearch(proportionList, proportion);
+            if (index < 0) {
+                index = -index - 1;
+            }
+            proportionList.add(index, proportion);
+            System.out.println(proportionList);
+        }
+    }
+
+    private Release findInjectedVersionProportion(List<Double> proportionList, List<Release> releases, Release fixedVersion, Release openingVersion) {
+        //Implements incremental proportion
+        double proportion = proportionList.get((int) Math.floor((proportionList.size() * 1.0)/2));
+
+        int injectedNumber = (int) Math.floor(fixedVersion.getNumber() - (fixedVersion.getNumber() - openingVersion.getNumber()) * proportion);
+
+        System.out.println("Found proportion: " + proportion + " injected release: " + injectedNumber);
+
+        return releases.get(injectedNumber);
+    }
+
     public List<Issue> getBugs(String projName, List<Release> allReleases) throws IOException {
         List<Issue> issuesList = new ArrayList<>();
+        List<Double> proportionList = new ArrayList<>();
+        proportionList.add(0.5);
+
+        DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+                .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                .appendPattern("XX")
+                .toFormatter();
 
         //Create a map with all releases
         Map<String , Release> releaseMap = new HashMap<>();
@@ -67,8 +140,9 @@ public class JiraBoundary {
         do {
             j = i + 1000;
 
-            String url = "https://issues.apache.org/jira/rest/api/2/search?jql=project=" + projName + "%20AND%20issuetype=Bug%20AND%20status%20=%20Closed%20and%20resolution%20=%20fixed" +
-                    "%20AND%20affectedVersion%20in%20releasedVersions()&startAt=" + i + "&maxResults=" + j;
+            String url = "https://issues.apache.org/jira/rest/api/2/search?jql=project=" + projName + "%20AND%20issuetype=Bug%20AND%20(status%20=%20Closed%20OR%20status%20=%20Resolved)%20and%20resolution%20=%20fixed" +
+                    "%20ORDER%20BY%20createdDate%20ASC" +
+                    "%20&startAt=" + i + "&maxResults=" + j;
 
             JSONObject json = this.readJsonFromUrl(url);
             JSONArray issues = json.getJSONArray("issues");
@@ -82,39 +156,52 @@ public class JiraBoundary {
                 JSONArray fixVersionArray = fieldsObject.getJSONArray("fixVersions");
 
                 List<Release> affectedVersions = new ArrayList<>();
-                List<Release> fixedVersion = new ArrayList<>();
+                List<Release> fixedVersions = new ArrayList<>();
 
-                //Get affected versions
-                for (int x = 0; x < affectedVersionArray.length(); x++) {
-                    String version = affectedVersionArray.getJSONObject(x).getString("name");
-                    affectedVersions.add(releaseMap.get(version));
-                }
+                String dateString = fieldsObject.getString("created");
+                ZonedDateTime creationDate = ZonedDateTime.parse(dateString, formatter);
+
+                Release openingVersion = findRelease(creationDate, allReleases);
+
+                dateString = fieldsObject.getString("resolutiondate");
+
+                ZonedDateTime resolutionDate = ZonedDateTime.parse(dateString, formatter);
 
                 //Get fixed versions
                 for (int x = 0; x < fixVersionArray.length(); x++) {
                     String version = fixVersionArray.getJSONObject(x).getString("name");
-                    fixedVersion.add(releaseMap.get(version));
+                    fixedVersions.add(releaseMap.get(version));
                 }
 
-                String dateString = fieldsObject.getString("resolutiondate");
-
-                DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-                        .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                        .appendPattern("XX")
-                        .toFormatter();
-
-                ZonedDateTime resolutionDate = ZonedDateTime.parse(dateString, formatter);
-
                 //Use date to find fixed version
-                if (fixedVersion.isEmpty()) {
-                    fixedVersion.add(findRelease(resolutionDate, allReleases));
+                if (fixedVersions.isEmpty()) {
+                    fixedVersions.add(findRelease(resolutionDate, allReleases));
+                }
+
+                Release fixed = findFixed(fixedVersions);
+
+                Release injected;
+
+                if(affectedVersionArray.length() == 0) {
+                    //Use proportion
+                    injected = findInjectedVersionProportion(proportionList, allReleases, fixed, openingVersion);
+                } else {
+
+                    //Get affected versions
+                    for (int x = 0; x < affectedVersionArray.length(); x++) {
+                        String version = affectedVersionArray.getJSONObject(x).getString("name");
+                        affectedVersions.add(releaseMap.get(version));
+                    }
+
+                    injected = findInjected(affectedVersions);
+                    addProportion(injected, openingVersion, fixed, proportionList);
                 }
 
                 //Do not consider issue with same injected and fixed version
-                if (affectedVersions.size() == fixedVersion.size() && affectedVersions.get(0).equals(fixedVersion.get(0)))
+                if (affectedVersions.size() == fixedVersions.size() && affectedVersions.get(0).equals(fixedVersions.get(0)))
                     continue;
 
-                Issue issue = new Issue(jsonObject.getString("key"), affectedVersions, fixedVersion, resolutionDate);
+                Issue issue = new Issue(jsonObject.getString("key"), injected, fixed, openingVersion, resolutionDate);
                 issuesList.add(issue);
             }
         } while (i < total);

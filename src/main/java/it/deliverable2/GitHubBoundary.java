@@ -13,6 +13,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GitHubBoundary {
 
@@ -377,6 +379,15 @@ public class GitHubBoundary {
         }
     }
 
+    public void setIssueAffectFile(List<Issue> issues, List<Commit> commitList) {
+        for(Issue issue : issues) {
+            LOGGER.log(Level.INFO, "Doing {0}\r", issue.getName());
+
+
+        }
+    }
+
+    //Get date of a release
     public ZonedDateTime getReleaseDate(String releaseName, File localPath) throws IOException {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss ZZ");
 
@@ -397,11 +408,12 @@ public class GitHubBoundary {
         return ZonedDateTime.now();
     }
 
-    public List<Commit> getCommits(ZonedDateTime untilDate, File localPath) throws IOException {
+    //Get commits with touched files
+    public List<Commit> getCommits(File localPath) throws IOException {
         List<Commit> commitList = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss ZZ");
 
-        Process process = runtime.exec("git log --numstat --pretty=format:Commit###%H###%ci###%an###%s --before=" + untilDate, null, localPath);
+        Process process = runtime.exec("git log --numstat --pretty=format:Commit###%H###%ci###%an###%s", null, localPath);
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
         Commit prevCommit = new Commit();
@@ -415,10 +427,24 @@ public class GitHubBoundary {
                 String dateString = tokens[2];
                 String author = tokens[3];
                 String message = tokens[4];
+                String name;
+                String key;
 
                 ZonedDateTime dateTime = ZonedDateTime.parse(dateString, formatter);
 
-                Commit commit = new Commit(getCommitName(message), message, sha, dateTime);
+                Pattern pattern = Pattern.compile("((?<=(ISSUE|AVRO|BOOKKEEPER)-)[0-9]+|(?<=(ISSUE|AVRO|BOOKKEPER) #)[0-9]+|(?<=.\\(#)[0-9]+(?=\\)))");
+                Matcher matcher = pattern.matcher(line);
+
+                if (matcher.find()) {
+                    key = matcher.group(0);
+                    name = projName.toUpperCase() + "-"+ key;
+                } else {
+                    name = message;
+                }
+
+                System.out.println(name + "###" + message);
+
+                Commit commit = new Commit(name, message, sha, dateTime);
                 commit.setAuthor(author);
 
                 prevCommit = commit;

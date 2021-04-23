@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 
 public class Main {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
-    private static final String PROJECTURL = "https://github.com/apache/avro.git";
+    private static final String PROJECTURL = "https://github.com/apache/";
 
     public static void main(String[] argv) throws IOException, GitAPIException {
 
@@ -20,7 +20,7 @@ public class Main {
         // git show --shortstat --format="" 338db27462cbb442a60033f99fde7d92f863b28a -- lang/c++/test/DataFileTests.cc
         // git log --pretty=format:"{\"hash\":%H, \"commit_date\":%cd, \"author\":%an, \"message\":%s}"
 
-        String projName = "avro";
+        String projName = "bookkeeper";
         String projOwner = "apache";
 
         final File localPath = new File("./TestRepo");
@@ -28,28 +28,31 @@ public class Main {
         GitHubBoundary gitHubBoundary = new GitHubBoundary(projOwner, projName, 0.5);
         JiraBoundary jiraBoundary = new JiraBoundary();
 
-        LOGGER.log(Level.INFO, "Fetching releases...");
-        List<Release> allReleases = jiraBoundary.getReleases(projName, localPath);
-        List<Issue> issues = jiraBoundary.getBugs("avro", allReleases);
-
-        List<Release> releases = jiraBoundary.getFirstPercentOfReleases(allReleases, 0.5);
-        List<Commit> commitList = gitHubBoundary.getCommits(releases.get(releases.size() - 1).getDate(), localPath);
-        LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
-
         if (!localPath.exists()) {
             LOGGER.log(Level.INFO, "Repository not found, downloading...");
             //Clone repo from GitHub
             Git.cloneRepository()
-                    .setURI(PROJECTURL)
+                    .setURI(PROJECTURL + projName + ".git")
                     .setDirectory(localPath)
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider("***", "***"))
                     .call();
             LOGGER.log(Level.INFO, "Download complete");
         }
 
+        LOGGER.log(Level.INFO, "Fetching releases...");
+        List<Release> allReleases = jiraBoundary.getReleases(projName, localPath);
+        List<Release> releases = jiraBoundary.getFirstPercentOfReleases(allReleases, 0.5);
+        LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
+
+        LOGGER.log(Level.INFO, "Fetching commits...");
+        List<Commit> commitList = gitHubBoundary.getCommits(localPath);
+        LOGGER.log(Level.INFO, "Number of commits: {0}", commitList.size());
+
+        LOGGER.log(Level.INFO, "Fetching issues...");
+        List<Issue> issues = jiraBoundary.getBugs(projName, allReleases);
+        LOGGER.log(Level.INFO, "Number of issues: {0}", issues.size());
+
         gitHubBoundary.assignFilesToReleases(releases, commitList, localPath);
-
-
 
         LOGGER.log(Level.INFO, "Setting issues files");
         gitHubBoundary.setIssueAffectFile(issues, localPath);

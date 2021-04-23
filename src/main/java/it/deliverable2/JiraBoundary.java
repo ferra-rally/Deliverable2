@@ -241,6 +241,7 @@ public class JiraBoundary {
             String name = versionJSON.getString("name");
             ZonedDateTime zonedDateTime;
 
+            //If release date is not present in JIRA get it from GitHUb
             if (versionJSON.isNull("releaseDate")) {
                 zonedDateTime = new GitHubBoundary().getReleaseDate(name, localPath);
             } else {

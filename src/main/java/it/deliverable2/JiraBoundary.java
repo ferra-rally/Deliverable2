@@ -110,11 +110,10 @@ public class JiraBoundary {
         //Implements incremental proportion
         double proportion = proportionList.get((int) Math.floor((proportionList.size() * 1.0)/2));
 
-        int injectedNumber = (int) Math.floor(fixedVersion.getNumber() - (fixedVersion.getNumber() - openingVersion.getNumber()) * proportion);
+        int injectedNumber = (int) Math.floor(fixedVersion.getNumber() - ((fixedVersion.getNumber() - openingVersion.getNumber()) * proportion));
 
-        System.out.println("Found proportion: " + proportion + " injected release: " + injectedNumber);
-
-        return releases.get(injectedNumber);
+        //Release are ordered and have number = position + 1
+        return releases.get(injectedNumber - 1);
     }
 
     public List<Issue> getBugs(String projName, List<Release> allReleases) throws IOException {
@@ -140,9 +139,9 @@ public class JiraBoundary {
         do {
             j = i + 1000;
 
-            String url = "https://issues.apache.org/jira/rest/api/2/search?jql=project=" + projName + "%20AND%20issuetype=Bug%20AND%20(status%20=%20Closed%20OR%20status%20=%20Resolved)%20and%20resolution%20=%20fixed" +
-                    "%20ORDER%20BY%20createdDate%20ASC" +
-                    "%20&startAt=" + i + "&maxResults=" + j;
+            String url = "https://issues.apache.org/jira/rest/api/2/search?jql=project=" + projName +
+                    "%20AND%20issuetype=Bug%20AND%20(status%20=%20Closed%20OR%20status%20=%20Resolved)%20and%20resolution%20=%20fixed" +
+                    "%20ORDER%20BY%20createdDate%20ASC%20&startAt=" + i + "&maxResults=" + j;
 
             JSONObject json = this.readJsonFromUrl(url);
             JSONArray issues = json.getJSONArray("issues");
@@ -273,5 +272,4 @@ public class JiraBoundary {
 
         return releasesList;
     }
-
 }

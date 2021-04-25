@@ -13,6 +13,24 @@ public class Main {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     private static final String PROJECTURL = "https://github.com/apache/";
 
+    private static HashMap<String, List<Commit>> convertListToHashMap(List<Commit> commitList) {
+        HashMap<String, List<Commit>> commitMap = new HashMap<>();
+
+        for(Commit commit : commitList) {
+            String key = commit.getName();
+            if(commitMap.containsKey(key)) {
+                commitMap.get(key).add(commit);
+            } else {
+                List<Commit> commits = new ArrayList<>();
+                commits.add(commit);
+
+                commitMap.put(key, commits);
+            }
+        }
+
+        return commitMap;
+    }
+
     public static void main(String[] argv) throws IOException, GitAPIException {
 
         // git show 357b8fad6464ab25f8e03385ca54d1ce8ec63543 --shortstat --format="" to get stats
@@ -46,6 +64,7 @@ public class Main {
 
         LOGGER.log(Level.INFO, "Fetching commits...");
         List<Commit> commitList = gitHubBoundary.getCommits(localPath);
+        HashMap<String, List<Commit>> commitMap = convertListToHashMap(commitList);
         LOGGER.log(Level.INFO, "Number of commits: {0}", commitList.size());
 
         LOGGER.log(Level.INFO, "Fetching issues...");
@@ -55,7 +74,7 @@ public class Main {
         gitHubBoundary.assignFilesToReleases(releases, commitList, localPath);
 
         LOGGER.log(Level.INFO, "Setting issues files");
-        gitHubBoundary.setIssueAffectFile(issues, localPath);
+        gitHubBoundary.setIssueAffectFile(issues, commitMap);
 
         //Assign bugs
         for (Issue issue : issues) {

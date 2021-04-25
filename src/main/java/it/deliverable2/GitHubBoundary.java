@@ -379,11 +379,19 @@ public class GitHubBoundary {
         }
     }
 
-    public void setIssueAffectFile(List<Issue> issues, List<Commit> commitList) {
+    //Set the affected file of an issue list
+    public void setIssueAffectFile(List<Issue> issues, Map<String, List<Commit>> commitMap) {
         for(Issue issue : issues) {
             LOGGER.log(Level.INFO, "Doing {0}\r", issue.getName());
+            String key = issue.getName();
 
+            if(commitMap.containsKey(key)) {
+                List<Commit> commits = commitMap.get(key);
 
+                for(Commit commit : commits) {
+                    issue.setAffects(commit.getTouchedFiles());
+                }
+            }
         }
     }
 
@@ -432,6 +440,7 @@ public class GitHubBoundary {
 
                 ZonedDateTime dateTime = ZonedDateTime.parse(dateString, formatter);
 
+                //TODO simplify pattern by separiting in multiple regular expressions
                 Pattern pattern = Pattern.compile("((?<=(ISSUE|AVRO|BOOKKEEPER)-)[0-9]+|(?<=(ISSUE|AVRO|BOOKKEPER) #)[0-9]+|(?<=.\\(#)[0-9]+(?=\\)))");
                 Matcher matcher = pattern.matcher(line);
 
@@ -441,8 +450,6 @@ public class GitHubBoundary {
                 } else {
                     name = message;
                 }
-
-                System.out.println(name + "###" + message);
 
                 Commit commit = new Commit(name, message, sha, dateTime);
                 commit.setAuthor(author);

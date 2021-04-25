@@ -196,10 +196,6 @@ public class JiraBoundary {
                     addProportion(injected, openingVersion, fixed, proportionList);
                 }
 
-                //Do not consider issue with same injected and fixed version
-                if (affectedVersions.size() == fixedVersions.size() && affectedVersions.get(0).equals(fixedVersions.get(0)))
-                    continue;
-
                 Issue issue = new Issue(jsonObject.getString("key"), injected, fixed, openingVersion, resolutionDate);
                 issuesList.add(issue);
             }

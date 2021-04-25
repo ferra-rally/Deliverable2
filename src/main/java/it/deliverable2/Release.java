@@ -29,7 +29,9 @@ public class Release implements Comparable<Release> {
         this.fullName = "release-" + this.name;
     }
 
-    public void setBugs(List<CommitFile> issueFiles) {
+    public void setBugs(Issue issue) {
+        List<CommitFile> issueFiles = issue.getAffects();
+
         List<String> issueFileNames = new ArrayList<>();
         for (CommitFile file : issueFiles) {
             issueFileNames.add(file.getFilename());

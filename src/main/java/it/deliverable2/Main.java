@@ -84,14 +84,14 @@ public class Main {
             boolean setBugs = false;
 
             for (Release rel : releases) {
-                if (rel.equals(injectVersion)) {
+                if (rel.equals(injectVersion) && !injectVersion.equals(fixVersion)) {
                     setBugs = true;
                 } else if (rel.equals(fixVersion)) {
                     break;
                 }
 
                 if (setBugs && issue.getAffects() != null) {
-                    rel.setBugs(issue.getAffects());
+                    rel.setBugs(issue);
                 }
             }
         }

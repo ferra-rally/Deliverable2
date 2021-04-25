@@ -322,7 +322,7 @@ public class GitHubBoundary {
         }
     }
 
-    //Assign files to release
+    //Set metrics and assign files to releases
     public void assignFilesToReleases(List<Release> releases, List<Commit> commitList, File localPath) throws IOException {
         for(Release rel : releases) {
 

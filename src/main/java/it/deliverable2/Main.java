@@ -87,6 +87,7 @@ public class Main {
                 if (rel.equals(injectVersion) && !injectVersion.equals(fixVersion)) {
                     setBugs = true;
                 } else if (rel.equals(fixVersion)) {
+                    rel.setFix(issue);
                     break;
                 }
 

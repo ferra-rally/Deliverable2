@@ -1,21 +1,35 @@
 package it.deliverable2;
 
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 //Class that stores the release file info
 public class ReleaseFile {
     private int bugs = 0;
+    private int fixes = 0;
     private int loc;
+    private ZonedDateTime insertDate;
+
     //TODO is this modified  or is (addition - deletion) ??
     private int addition;
     private int deletion;
     private String filename;
+
+    private List<Integer> addedList;
+    private List<Integer> churnList;
+    private List<Integer> chgSetList;
+
     private int numOfRevision = 0;
+
     private List<String> authorList;
 
     public ReleaseFile(String filename) {
         this.filename = filename;
+
+        this.addedList = new ArrayList<>();
+        this.churnList = new ArrayList<>();
+        this.chgSetList = new ArrayList<>();
     }
 
     public String isBuggy() {
@@ -92,15 +106,85 @@ public class ReleaseFile {
         }
     }
 
-    public void addAdded(int addition) {
+    public void addAddedAndDelition(int addition, int deletion) {
         this.addition += addition;
-    }
-
-    public void addDeletion(int deletion) {
         this.deletion += deletion;
+
+        this.churnList.add(addition - deletion);
+
+        this.addedList.add(addition);
     }
 
     public void addRevision() {
         this.numOfRevision++;
+    }
+
+    public Integer getLocAdded() {
+        return this.addition;
+    }
+
+    private Integer max(List<Integer> list) {
+        Integer max = 0;
+        for(Integer x : list) {
+            if(x > max) {
+                max = x;
+            }
+        }
+
+        return max;
+    }
+
+    public Integer getMaxLocAdded() {
+        return max(this.addedList);
+    }
+
+    public double getAvgLoxAdded() {
+        return ((this.addition * 1.0) / this.addedList.size());
+    }
+
+    public Integer getChurn() {
+        return this.addition - this.deletion;
+    }
+
+    public Integer getMaxChurn() {
+        return max(this.churnList);
+    }
+
+    public double getAvgChurn() {
+        return (((this.addition - this.deletion) * 1.0) / this.churnList.size());
+    }
+
+    public void addChgSetSize(Integer chgSet) {
+        this.chgSetList.add(chgSet);
+    }
+
+    public Integer getMaxChgSetSize() {
+        return max(this.chgSetList);
+    }
+
+    public double getAvgChgSetSize() {
+        double sum = 0;
+
+        for(Integer x : chgSetList) {
+            sum += x;
+        }
+
+        return sum/chgSetList.size();
+    }
+
+    public void addFix() {
+        this.fixes++;
+    }
+
+    public int getFixes() {
+        return this.fixes;
+    }
+
+    public void setInsertDate(ZonedDateTime insertionDate) {
+        this.insertDate = insertionDate;
+    }
+
+    public ZonedDateTime getInsertDate() {
+        return this.insertDate;
     }
 }

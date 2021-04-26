@@ -30,16 +30,35 @@ public class Release implements Comparable<Release> {
     }
 
     public void setBugs(Issue issue) {
-        List<CommitFile> issueFiles = issue.getAffects();
-
         List<String> issueFileNames = new ArrayList<>();
-        for (CommitFile file : issueFiles) {
+
+        for (CommitFile file : issue.getAffects()) {
             issueFileNames.add(file.getFilename());
         }
 
         for (ReleaseFile file : fileList) {
             if (issueFileNames.contains(file.getFilename())) {
                 file.addBug();
+            }
+        }
+    }
+
+    public void setFix(Issue issue) {
+        List<CommitFile> files = issue.getAffects();
+        //Check if issue has committed files
+        if(files == null) {
+            return;
+        }
+
+        List<String> issueFileNames = new ArrayList<>();
+
+        for (CommitFile file : files) {
+            issueFileNames.add(file.getFilename());
+        }
+
+        for (ReleaseFile file : fileList) {
+            if (issueFileNames.contains(file.getFilename())) {
+                file.addFix();
             }
         }
     }

@@ -11,7 +11,6 @@ public class ReleaseFile {
     private int loc;
     private ZonedDateTime insertDate;
 
-    //TODO is this modified  or is (addition - deletion) ??
     private int addition;
     private int deletion;
     private String filename;
@@ -138,8 +137,12 @@ public class ReleaseFile {
         return max(this.addedList);
     }
 
-    public double getAvgLoxAdded() {
-        return ((this.addition * 1.0) / this.addedList.size());
+    public double getAvgLocAdded() {
+        double avg = ((this.addition * 1.0) / this.addedList.size());
+
+        if(Double.isNaN(avg)) return 0;
+
+        return avg;
     }
 
     public Integer getChurn() {
@@ -151,7 +154,11 @@ public class ReleaseFile {
     }
 
     public double getAvgChurn() {
-        return (((this.addition - this.deletion) * 1.0) / this.churnList.size());
+        double avg = (((this.addition - this.deletion) * 1.0) / this.churnList.size());
+
+        if(Double.isNaN(avg)) return 0;
+
+        return avg;
     }
 
     public void addChgSetSize(Integer chgSet) {
@@ -169,7 +176,11 @@ public class ReleaseFile {
             sum += x;
         }
 
-        return sum/chgSetList.size();
+        double avg = sum/chgSetList.size();
+
+        if(Double.isNaN(avg)) return 0;
+
+        return avg;
     }
 
     public void addFix() {

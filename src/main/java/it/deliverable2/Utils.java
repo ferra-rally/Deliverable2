@@ -5,7 +5,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -61,7 +60,7 @@ public class Utils {
 
                     outWriter.write(number + "," + file.getFilename() + "," + file.getLoc() + "," + locTouched + "," + file.getNumOfRevision()
                             + file.getFixes() + "," + "," + file.getNumOfAuthors() + "," + file.getLocAdded() + "," +
-                            file.getMaxLocAdded() + "," + file.getAvgLoxAdded() + "," + file.getChurn() + "," + file.getMaxChurn() + "," +
+                            file.getMaxLocAdded() + "," + file.getAvgLocAdded() + "," + file.getChurn() + "," + file.getMaxChurn() + "," +
                             file.getAvgChurn() + "," + file.getMaxChgSetSize() + "," + file.getAvgChgSetSize() + "," + ageString + "," + file.isBuggy() + "\n");
                 }
             }

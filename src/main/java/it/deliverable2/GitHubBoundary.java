@@ -299,7 +299,7 @@ public class GitHubBoundary {
                     releaseFileList.add(new ReleaseFile(line));
                 }
             }
-
+            System.out.println(rel.getName() + " has " + releaseFileList.size());
         return releaseFileList;
     }
 
@@ -322,14 +322,12 @@ public class GitHubBoundary {
     }
 
     //Set insertion dates for all file
-    public void setInsertionDate(List<ReleaseFile> fileList, File localPath, Map<String, ZonedDateTime> insertedMap) throws IOException {
-        for(ReleaseFile releaseFile : fileList) {
+    public ZonedDateTime setInsertionDate(ReleaseFile releaseFile, File localPath, Map<String, ZonedDateTime> insertedMap) throws IOException {
 
             String filename = releaseFile.getFilename();
-
             if (insertedMap.containsKey(filename)) {
                 releaseFile.setInsertDate(insertedMap.get(filename));
-                return;
+                return insertedMap.get(filename);
             }
 
             Process process = runtime.exec("git log --diff-filter=A --pretty=format:%ci -- " + filename, null, localPath);
@@ -341,14 +339,14 @@ public class GitHubBoundary {
             while ((line = reader.readLine()) != null) {
 
                 if (line.length() > 0) {
-                    System.out.println("Filename " + filename + " " + line);
                     dateTime = ZonedDateTime.parse(line, formatter);
-                    releaseFile.setInsertDate(dateTime);
+                    //releaseFile.setInsertDate(dateTime);
 
                     insertedMap.put(filename, dateTime);
+                    return dateTime;
                 }
             }
-        }
+        return insertedMap.get(filename);
     }
 
     //Set metrics and assign files to releases
@@ -356,16 +354,14 @@ public class GitHubBoundary {
         Map<String, ZonedDateTime> insertDateMap = new HashMap<>();
 
         for(Release rel : releases) {
-
             Map<String, ReleaseFile> fileMap = new HashMap<>();
 
             List<ReleaseFile> releaseFileList = getReleaseFileList(rel, localPath);
 
-            setInsertionDate(releaseFileList, localPath, insertDateMap);
-
             //Get all release files
             for(ReleaseFile relFile : releaseFileList) {
                 fileMap.put(relFile.getFilename(), relFile);
+                relFile.setInsertDate(setInsertionDate(relFile, localPath, insertDateMap));
             }
 
             List<Commit> commitsOfRelease = new ArrayList<>();
@@ -381,7 +377,6 @@ public class GitHubBoundary {
 
             //Set addition, deletion and authors
             setTouchedFile(commitsOfRelease, fileMap);
-            setInsertionDate(new ArrayList<>(fileMap.values()), localPath, insertDateMap);
 
             //Set lines of code
             for(ReleaseFile releaseFile : fileMap.values()) {
@@ -454,7 +449,7 @@ public class GitHubBoundary {
     public List<Commit> getCommits(File localPath) throws IOException {
         List<Commit> commitList = new ArrayList<>();
 
-        Process process = runtime.exec("git log --numstat --pretty=format:Commit###%H###%ci###%an###%s", null, localPath);
+        Process process = runtime.exec("git log --all --numstat --pretty=format:Commit###%H###%ci###%an###%s", null, localPath);
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
         Commit prevCommit = new Commit();

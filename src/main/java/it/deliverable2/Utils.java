@@ -39,7 +39,7 @@ public class Utils {
     public static void writeCsv(String projName, String projOwner, List<Release> releases) {
         //Write output in csv
         try (FileWriter outWriter = new FileWriter(projName + "_" + projOwner + "_out.csv")) {
-            outWriter.write("Release, Filename, LOC, LOC_touched, NR, NFix, NAuth, LOC_added, MAX_LOC_added, AVG_LOC_added, Churn, MAX_Churn, MAX_ChgSet, AVG_ChgSet, Age, Buggy\n");
+            outWriter.write("Release, Filename, LOC, LOC_touched, NR, NFix, NAuth, LOC_added, MAX_LOC_added, AVG_LOC_added, Churn, MAX_Churn, MAX_ChgSet, AVG_ChgSet, Age, Weighted_Age, Buggy\n");
             for (Release rel : releases) {
                 int number = rel.getNumber();
                 ZonedDateTime releaseDate = rel.getDate();
@@ -50,18 +50,23 @@ public class Utils {
                     //Age in milliseconds
                     ZonedDateTime insertionDate = file.getInsertDate();
                     String ageString;
+                    String weighetAgeString;
                     int locTouched = file.getChanges();
 
                     if(insertionDate != null) {
-                        ageString = Duration.between(releaseDate, insertionDate).toMillis() + "";
+                        long duration = Math.abs(Duration.between(releaseDate, insertionDate).toMillis());
+                        long weightedAge = locTouched * duration;
+                        weighetAgeString = weightedAge + "";
+                        ageString = duration + "";
                     } else {
                         ageString = "?";
+                        weighetAgeString = "?";
                     }
 
-                    outWriter.write(number + "," + file.getFilename() + "," + file.getLoc() + "," + locTouched + "," + file.getNumOfRevision()
+                    outWriter.write(number + "," + file.getFilename() + "," + file.getLoc() + "," + locTouched + "," + file.getNumOfRevision() + ","
                             + file.getFixes() + "," + "," + file.getNumOfAuthors() + "," + file.getLocAdded() + "," +
                             file.getMaxLocAdded() + "," + file.getAvgLocAdded() + "," + file.getChurn() + "," + file.getMaxChurn() + "," +
-                            file.getAvgChurn() + "," + file.getMaxChgSetSize() + "," + file.getAvgChgSetSize() + "," + ageString + "," + file.isBuggy() + "\n");
+                            file.getAvgChurn() + "," + file.getMaxChgSetSize() + "," + file.getAvgChgSetSize() + "," + ageString + "," + weighetAgeString + "," + file.isBuggy() + "\n");
                 }
             }
         } catch (IOException e) {

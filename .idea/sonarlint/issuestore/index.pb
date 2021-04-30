@@ -9,7 +9,7 @@ Z
 *src/main/java/it/deliverable2/Release.java,c/0/c09f08446a217b09ae7f548445c450b9d1f1b3db
 :
 
-.gitignore,a\5\a5cc2925ca8258af241be7e5b0381edf30266302
+.gitignore,a/5/a5cc2925ca8258af241be7e5b0381edf30266302
 X
 (src/main/java/it/deliverable2/Issue.java,5/5/5500318d2f945cc13e4163c196381e32e4afc710
 a
@@ -23,4 +23,6 @@ X
 ]
 -src/main/java/it/deliverable2/CommitFile.java,4\9\49578525e7ef546eefe2aa3454979a656c621651
 ^
-.src/main/java/it/deliverable2/ReleaseFile.java,0\5\057c606c377a49e19ed0fd18e957cafcd9fe03b2
+.src/main/java/it/deliverable2/ReleaseFile.java,0/5/057c606c377a49e19ed0fd18e957cafcd9fe03b2
+I
+bookkeeper_apache_out.csv,b/2/b265ac7937db52db91dacf364771981d583765af

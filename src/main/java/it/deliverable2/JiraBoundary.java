@@ -102,7 +102,6 @@ public class JiraBoundary {
                 index = -index - 1;
             }
             proportionList.add(index, proportion);
-            System.out.println(proportionList);
         }
     }
 
@@ -116,9 +115,28 @@ public class JiraBoundary {
         return releases.get(injectedNumber - 1);
     }
 
-    public List<Issue> getBugs(String projName, List<Release> allReleases) throws IOException {
+    public ZonedDateTime findFixedTime(String key, Map<String, List<Commit>> commitMap, JSONObject fieldsObject, DateTimeFormatter formatter) {
+        //If the commit is available get the date
+        if (commitMap.containsKey(key)) {
+            //Get the last commit in order of date
+            List<Commit> commitList = commitMap.get(key);
+
+            Collections.sort(commitList);
+
+            //Get the last commit
+            return commitList.get(commitList.size() - 1).getDate();
+        } else {
+            //If commit is not available use jira
+            String dateString = fieldsObject.getString("resolutiondate");
+
+            return ZonedDateTime.parse(dateString, formatter);
+        }
+    }
+
+    public List<Issue> getBugs(String projName, List<Release> allReleases, Map<String, List<Commit>> commitMap) throws IOException {
         List<Issue> issuesList = new ArrayList<>();
         List<Double> proportionList = new ArrayList<>();
+        //TODO use 0.5?
         proportionList.add(0.5);
 
         DateTimeFormatter formatter = new DateTimeFormatterBuilder()
@@ -153,6 +171,7 @@ public class JiraBoundary {
                 //Get affected versions
                 JSONArray affectedVersionArray = fieldsObject.getJSONArray("versions");
                 JSONArray fixVersionArray = fieldsObject.getJSONArray("fixVersions");
+                String key = jsonObject.getString("key");
 
                 List<Release> affectedVersions = new ArrayList<>();
                 List<Release> fixedVersions = new ArrayList<>();
@@ -162,9 +181,7 @@ public class JiraBoundary {
 
                 Release openingVersion = findRelease(creationDate, allReleases);
 
-                dateString = fieldsObject.getString("resolutiondate");
-
-                ZonedDateTime resolutionDate = ZonedDateTime.parse(dateString, formatter);
+                ZonedDateTime resolutionDate = findFixedTime(key, commitMap, fieldsObject, formatter);
 
                 //Get fixed versions
                 for (int x = 0; x < fixVersionArray.length(); x++) {
@@ -196,7 +213,7 @@ public class JiraBoundary {
                     addProportion(injected, openingVersion, fixed, proportionList);
                 }
 
-                Issue issue = new Issue(jsonObject.getString("key"), injected, fixed, openingVersion, resolutionDate);
+                Issue issue = new Issue(key, injected, fixed, openingVersion, resolutionDate);
                 issuesList.add(issue);
             }
         } while (i < total);

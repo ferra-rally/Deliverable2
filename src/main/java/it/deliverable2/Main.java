@@ -68,7 +68,7 @@ public class Main {
         LOGGER.log(Level.INFO, "Number of commits: {0}", commitList.size());
 
         LOGGER.log(Level.INFO, "Fetching issues...");
-        List<Issue> issues = jiraBoundary.getBugs(projName, allReleases);
+        List<Issue> issues = jiraBoundary.getBugs(projName, allReleases, commitMap);
         LOGGER.log(Level.INFO, "Number of issues: {0}", issues.size());
 
         gitHubBoundary.assignFilesToReleases(releases, commitList, localPath);

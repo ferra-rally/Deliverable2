@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 
 public class Utils {
     private static final Logger LOGGER = Logger.getLogger( Utils.class.getName() );
+    private static final String directory = "./out/";
 
     private Utils() {
 
@@ -38,7 +39,7 @@ public class Utils {
 
     public static void writeCsv(String projName, String projOwner, List<Release> releases) {
         //Write output in csv
-        try (FileWriter outWriter = new FileWriter(projName + "_" + projOwner + "_out.csv")) {
+        try (FileWriter outWriter = new FileWriter(directory + projName + "_" + projOwner + "_out.csv")) {
             outWriter.write("Release, Filename, LOC, LOC_touched, NR, NFix, NAuth, LOC_added, MAX_LOC_added, AVG_LOC_added, Churn, MAX_Churn, MAX_ChgSet, AVG_ChgSet, Age, Weighted_Age, Buggy\n");
             for (Release rel : releases) {
                 int number = rel.getNumber();
@@ -64,7 +65,7 @@ public class Utils {
                     }
 
                     outWriter.write(number + "," + file.getFilename() + "," + file.getLoc() + "," + locTouched + "," + file.getNumOfRevision() + ","
-                            + file.getFixes() + "," + "," + file.getNumOfAuthors() + "," + file.getLocAdded() + "," +
+                            + file.getFixes() + "," + file.getNumOfAuthors() + "," + file.getLocAdded() + "," +
                             file.getMaxLocAdded() + "," + file.getAvgLocAdded() + "," + file.getChurn() + "," + file.getMaxChurn() + "," +
                             file.getAvgChurn() + "," + file.getMaxChgSetSize() + "," + file.getAvgChgSetSize() + "," + ageString + "," + weighetAgeString + "," + file.isBuggy() + "\n");
                 }
@@ -72,6 +73,10 @@ public class Utils {
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Unable to write csv file");
         }
+    }
+
+    public static void writeFile(String name, List<Release> releases) {
+
     }
 
     //Delete directory if exists

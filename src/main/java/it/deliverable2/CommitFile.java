@@ -34,24 +34,12 @@ public class CommitFile {
         return filename;
     }
 
-    public void setFilename(String filename) {
-        this.filename = filename;
-    }
-
     public int getAddition() {
         return addition;
     }
 
-    public void setAddition(int addition) {
-        this.addition = addition;
-    }
-
     public int getDeletion() {
         return deletion;
-    }
-
-    public void setDeletion(int deletion) {
-        this.deletion = deletion;
     }
 
     public int getChanges() {

@@ -145,6 +145,7 @@ public class JiraBoundary {
     public List<Issue> getBugs(String projName, List<Release> allReleases, Map<String, List<Commit>> commitMap) throws IOException {
         List<Issue> issuesList = new ArrayList<>();
         List<Double> proportionList = new ArrayList<>();
+
         //TODO use 0.5?
         proportionList.add(0.5);
 

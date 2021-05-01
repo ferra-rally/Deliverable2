@@ -20,13 +20,15 @@ public class JiraBoundary {
     private static final Logger LOGGER = Logger.getLogger(JiraBoundary.class.getName());
 
     private Release findRelease(ZonedDateTime dateTime, List<Release> allReleases) {
+        Collections.sort(allReleases);
+
         Release prev = allReleases.get(0);
         for (int i = 0; i < allReleases.size(); i++) {
             Release rel = allReleases.get(i);
 
             if (dateTime.isAfter(rel.getDate())) {
                 return prev;
-            } else if(i == allReleases.size() - 1) {
+            } else if (i == allReleases.size() - 1) {
                 return allReleases.get(allReleases.size() - 1);
             }
 
@@ -55,15 +57,24 @@ public class JiraBoundary {
     }
 
     //Get the last fixed version if there are multiple
-    private Release findFixed(List<Release> fixedList) {
-        Release fixVersion = null;
+    private Release findFixed(JSONArray fixVersionArray, ZonedDateTime resolutionDate, Map<String, Release> releaseMap) {
+        List<Release> fixedVersions = new ArrayList<>();
 
-        if(!fixedList.isEmpty()) {
-            fixVersion = fixedList.get(0);
+        //Get fixed versions
+        for (int x = 0; x < fixVersionArray.length(); x++) {
+            String version = fixVersionArray.getJSONObject(x).getString("name");
+            fixedVersions.add(releaseMap.get(version));
+        }
 
-            for(int i = 1; i < fixedList.size(); i++) {
-                if(fixVersion.compareTo(fixedList.get(i)) < 0) fixVersion = fixedList.get(i);
-            }
+        //Use date to find fixed version
+        if (fixedVersions.isEmpty()) {
+            fixedVersions.add(findRelease(resolutionDate, new ArrayList<>(releaseMap.values())));
+        }
+
+        Release fixVersion = fixedVersions.get(0);
+
+        for (int i = 1; i < fixedVersions.size(); i++) {
+            if (fixVersion.compareTo(fixedVersions.get(i)) < 0) fixVersion = fixedVersions.get(i);
         }
 
         return fixVersion;
@@ -71,15 +82,12 @@ public class JiraBoundary {
 
     //Get the first affected version if there are multiple
     private Release findInjected(List<Release> affectedList) {
-        Release injectVersion = null;
+        Release injectVersion = affectedList.get(0);
 
-        if(!affectedList.isEmpty()) {
-            injectVersion = affectedList.get(0);
-
-            for(int i = 1; i < affectedList.size(); i++) {
-                if(injectVersion.compareTo(affectedList.get(i)) > 0) injectVersion = affectedList.get(i);
-            }
+        for (int i = 1; i < affectedList.size(); i++) {
+            if (injectVersion.compareTo(affectedList.get(i)) > 0) injectVersion = affectedList.get(i);
         }
+
 
         return injectVersion;
     }
@@ -90,12 +98,12 @@ public class JiraBoundary {
         int openingNumber = opening.getNumber();
 
         //Invalid proportion
-        if(openingNumber >= fixedNumber) {
+        if (openingNumber >= fixedNumber) {
             return;
         }
 
-        double proportion =  (fixedNumber * 1.0 - injectedNumber)/(fixedNumber - openingNumber);
-        if(Double.isFinite(proportion) && proportion > 0) {
+        double proportion = (fixedNumber * 1.0 - injectedNumber) / (fixedNumber - openingNumber);
+        if (Double.isFinite(proportion) && proportion > 0) {
 
             int index = Collections.binarySearch(proportionList, proportion);
             if (index < 0) {
@@ -107,11 +115,12 @@ public class JiraBoundary {
 
     private Release findInjectedVersionProportion(List<Double> proportionList, List<Release> releases, Release fixedVersion, Release openingVersion) {
         //Implements incremental proportion
-        double proportion = proportionList.get((int) Math.floor((proportionList.size() * 1.0)/2));
+        double proportion = proportionList.get((int) Math.floor((proportionList.size() * 1.0) / 2));
 
         int injectedNumber = (int) Math.floor(fixedVersion.getNumber() - ((fixedVersion.getNumber() - openingVersion.getNumber()) * proportion));
 
         //Release are ordered and have number = position + 1
+
         return releases.get(injectedNumber - 1);
     }
 
@@ -145,8 +154,8 @@ public class JiraBoundary {
                 .toFormatter();
 
         //Create a map with all releases
-        Map<String , Release> releaseMap = new HashMap<>();
-        for(Release rel : allReleases) {
+        Map<String, Release> releaseMap = new HashMap<>();
+        for (Release rel : allReleases) {
             releaseMap.put(rel.getName(), rel);
         }
 
@@ -174,7 +183,6 @@ public class JiraBoundary {
                 String key = jsonObject.getString("key");
 
                 List<Release> affectedVersions = new ArrayList<>();
-                List<Release> fixedVersions = new ArrayList<>();
 
                 String dateString = fieldsObject.getString("created");
                 ZonedDateTime creationDate = ZonedDateTime.parse(dateString, formatter);
@@ -183,22 +191,11 @@ public class JiraBoundary {
 
                 ZonedDateTime resolutionDate = findFixedTime(key, commitMap, fieldsObject, formatter);
 
-                //Get fixed versions
-                for (int x = 0; x < fixVersionArray.length(); x++) {
-                    String version = fixVersionArray.getJSONObject(x).getString("name");
-                    fixedVersions.add(releaseMap.get(version));
-                }
-
-                //Use date to find fixed version
-                if (fixedVersions.isEmpty()) {
-                    fixedVersions.add(findRelease(resolutionDate, allReleases));
-                }
-
-                Release fixed = findFixed(fixedVersions);
+                Release fixed = findFixed(fixVersionArray, resolutionDate, releaseMap);
 
                 Release injected;
 
-                if(affectedVersionArray.length() == 0) {
+                if (affectedVersionArray.length() == 0) {
                     //Use proportion
                     injected = findInjectedVersionProportion(proportionList, allReleases, fixed, openingVersion);
                 } else {
@@ -221,24 +218,7 @@ public class JiraBoundary {
         return issuesList;
     }
 
-    public List<Release> getFirstPercentOfReleases(List<Release> releases, double firstPercentReleases) {
-        List<Release> croppedReleasesList = new ArrayList<>();
-
-        int number = (int) Math.floor(releases.size() * (1 - firstPercentReleases));
-
-        for (int i = 0; i < number; i++) {
-            croppedReleasesList.add(releases.get(i));
-        }
-
-        List<String> releaseNames = new ArrayList<>();
-        for (Release rel : croppedReleasesList) {
-            releaseNames.add(rel.getName());
-        }
-        LOGGER.log(Level.INFO, "Used releases {0}", releaseNames);
-
-        return croppedReleasesList;
-    }
-
+    //Get releases from Jira
     public List<Release> getReleases(String projName, File localPath) throws IOException {
         List<Release> releasesList = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");

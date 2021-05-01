@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 public class GitHubBoundary {
 
     private static final String COMMIT_STRING = "commit";
+    private static final String GITHUB_STRING = "https://api.github.com/repos/";
     private static final Logger LOGGER = Logger.getLogger( GitHubBoundary.class.getName() );
     private double firstPercentReleases = 0.5;
     //Runtime for console commands
@@ -65,7 +66,7 @@ public class GitHubBoundary {
         try (BufferedReader brTest = new BufferedReader(new FileReader(file))) {
             return brTest.readLine();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Unable to open git_token");
         }
 
         return "";
@@ -125,7 +126,7 @@ public class GitHubBoundary {
         JSONArray jsonReleases;
 
         do {
-            String url = "https://api.github.com/repos/" + projOwner + "/" + projName + "/tags?per_page=100&page=" + page + "&include_all_branches=true";
+            String url = GITHUB_STRING + projOwner + "/" + projName + "/tags?per_page=100&page=" + page + "&include_all_branches=true";
             jsonReleases = readJsonArrayFromUrl(url);
 
             for(int i = 0; i < jsonReleases.length(); i++) {
@@ -190,7 +191,7 @@ public class GitHubBoundary {
         JSONArray jsonCommits;
 
         do {
-            String url = "https://api.github.com/repos/" + projOwner + "/" + projName + "/commits?per_page=100&page=" + page + "&include_all_branches=true";
+            String url = GITHUB_STRING + projOwner + "/" + projName + "/commits?per_page=100&page=" + page + "&include_all_branches=true";
             jsonCommits = readJsonArrayFromUrl(url);
 
             for(int i = 0; i < jsonCommits.length(); i++) {
@@ -262,7 +263,7 @@ public class GitHubBoundary {
     }
 
     public Commit getCommitFromSha(String sha) throws IOException {
-        String url = "https://api.github.com/repos/" + this.projOwner + "/" + this.projName +"/commits/" + sha;
+        String url = GITHUB_STRING + this.projOwner + "/" + this.projName +"/commits/" + sha;
 
         return this.getCommitFromUrl(url);
     }
@@ -299,7 +300,6 @@ public class GitHubBoundary {
                     releaseFileList.add(new ReleaseFile(line));
                 }
             }
-            System.out.println(rel.getName() + " has " + releaseFileList.size());
         return releaseFileList;
     }
 
@@ -340,7 +340,6 @@ public class GitHubBoundary {
 
                 if (line.length() > 0) {
                     dateTime = ZonedDateTime.parse(line, formatter);
-                    //releaseFile.setInsertDate(dateTime);
 
                     insertedMap.put(filename, dateTime);
                     return dateTime;
@@ -445,6 +444,28 @@ public class GitHubBoundary {
         return ZonedDateTime.now();
     }
 
+    private String findKey(String message) {
+        Pattern patternInitial = Pattern.compile("((?<=(ISSUE|AVRO|BOOKKEEPER)-)[0-9]+|(?<=(ISSUE|AVRO|BOOKKEPER) #)[0-9]+)", Pattern.CASE_INSENSITIVE);
+        Pattern patterFinal = Pattern.compile("(?<=.\\(#)[0-9]+(?=\\))", Pattern.CASE_INSENSITIVE);
+        Matcher matcherInitial = patternInitial.matcher(message);
+        Matcher matcherFinal = patterFinal.matcher(message);
+
+        String key;
+        String name;
+
+        if (matcherInitial.find()) {
+            key = matcherInitial.group(0);
+            name = projName.toUpperCase() + "-"+ key;
+        } else if(matcherFinal.find()) {
+            key = matcherFinal.group(0);
+            name = projName.toUpperCase() + "-"+ key;
+        } else {
+            name = message;
+        }
+
+        return name;
+    }
+
     //Get commits with touched files
     public List<Commit> getCommits(File localPath) throws IOException {
         List<Commit> commitList = new ArrayList<>();
@@ -464,20 +485,10 @@ public class GitHubBoundary {
                 String author = tokens[3];
                 String message = tokens[4];
                 String name;
-                String key;
 
                 ZonedDateTime dateTime = ZonedDateTime.parse(dateString, formatter);
 
-                //TODO simplify pattern by separiting in multiple regular expressions
-                Pattern pattern = Pattern.compile("((?<=(ISSUE|AVRO|BOOKKEEPER)-)[0-9]+|(?<=(ISSUE|AVRO|BOOKKEPER) #)[0-9]+|(?<=.\\(#)[0-9]+(?=\\)))");
-                Matcher matcher = pattern.matcher(line);
-
-                if (matcher.find()) {
-                    key = matcher.group(0);
-                    name = projName.toUpperCase() + "-"+ key;
-                } else {
-                    name = message;
-                }
+                name = findKey(message);
 
                 Commit commit = new Commit(name, message, sha, dateTime);
                 commit.setAuthor(author);

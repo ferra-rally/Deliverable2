@@ -13,6 +13,24 @@ public class Main {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     private static final String PROJECTURL = "https://github.com/apache/";
 
+    public static List<Release> getFirstPercentOfReleases(List<Release> releases, double firstPercentReleases) {
+        List<Release> croppedReleasesList = new ArrayList<>();
+
+        int number = (int) Math.floor(releases.size() * (1 - firstPercentReleases));
+
+        for (int i = 0; i < number; i++) {
+            croppedReleasesList.add(releases.get(i));
+        }
+
+        List<String> releaseNames = new ArrayList<>();
+        for (Release rel : croppedReleasesList) {
+            releaseNames.add(rel.getName());
+        }
+        LOGGER.log(Level.INFO, "Used releases {0}", releaseNames);
+
+        return croppedReleasesList;
+    }
+
     private static HashMap<String, List<Commit>> convertListToHashMap(List<Commit> commitList) {
         HashMap<String, List<Commit>> commitMap = new HashMap<>();
 
@@ -41,11 +59,12 @@ public class Main {
         String projName = "bookkeeper";
         String projOwner = "apache";
 
-        final File localPath = new File("./TestRepo");
+        final File localPath = new File("./repos/" + projName);
 
         GitHubBoundary gitHubBoundary = new GitHubBoundary(projOwner, projName, 0.5);
         JiraBoundary jiraBoundary = new JiraBoundary();
 
+        //Download repositor
         if (!localPath.exists()) {
             LOGGER.log(Level.INFO, "Repository not found, downloading...");
             //Clone repo from GitHub
@@ -59,7 +78,7 @@ public class Main {
 
         LOGGER.log(Level.INFO, "Fetching releases...");
         List<Release> allReleases = jiraBoundary.getReleases(projName, localPath);
-        List<Release> releases = jiraBoundary.getFirstPercentOfReleases(allReleases, 0.5);
+        List<Release> releases = getFirstPercentOfReleases(allReleases, 0.5);
         LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
 
         LOGGER.log(Level.INFO, "Fetching commits...");

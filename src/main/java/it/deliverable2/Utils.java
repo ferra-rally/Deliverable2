@@ -1,6 +1,5 @@
 package it.deliverable2;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Duration;
@@ -122,16 +121,5 @@ public class Utils {
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Unable to write csv or arff file");
         }
-    }
-
-    //Delete directory if exists
-    private static boolean deleteDirectory(File directory) {
-        File[] allContents = directory.listFiles();
-        if (allContents != null) {
-            for (File file : allContents) {
-                deleteDirectory(file);
-            }
-        }
-        return directory.delete();
     }
 }

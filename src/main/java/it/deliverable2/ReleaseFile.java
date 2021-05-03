@@ -123,7 +123,9 @@ public class ReleaseFile {
     }
 
     private Integer max(List<Integer> list) {
-        Integer max = 0;
+        if(list.isEmpty()) return 0;
+
+        Integer max = Integer.MIN_VALUE;
         for(Integer x : list) {
             if(x > max) {
                 max = x;

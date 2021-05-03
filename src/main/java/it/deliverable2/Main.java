@@ -3,6 +3,7 @@ package it.deliverable2;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.RandomForest;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
@@ -129,15 +130,14 @@ public class Main {
         }
 
         //Write CSV
-        Utils.writeCsv(projName, projOwner, releases);
+        Utils.writeCsvReleases(projName, projOwner, releases);
     }
 
-    public static List<Instances> splitDataSet(Instances instances) {
+    public static List<Instances> splitDataSet(Instances instances, int numReleases) {
         List<Instances> setList = new ArrayList<>();
         int index = 0;
 
         List<String> releases = new ArrayList<>();
-        int numReleases = instances.attribute(index).numValues();
 
         for (int i = 0; i < numReleases; i++) {
             releases.add(instances.attribute(0).value(i));
@@ -161,17 +161,16 @@ public class Main {
     public static Map<String, Double> compareClassifiers(Instances training, Instances testing, Classifier classifier) throws Exception {
         Map<String, Double> map = new HashMap<>();
 
-
         classifier.buildClassifier(training);
 
         Evaluation eval = new Evaluation(testing);
 
         eval.evaluateModel(classifier, testing);
 
-        double auc = eval.areaUnderROC(1);
+        double auc = eval.areaUnderROC(0);
         double kappa = eval.kappa();
-        double precision = eval.precision(1);
-        double recall = eval.recall(1);
+        double precision = eval.precision(0);
+        double recall = eval.recall(0);
 
         map.put("auc", auc);
         map.put("kappa", kappa);
@@ -181,8 +180,45 @@ public class Main {
         return map;
     }
 
-    public static String walkForward() {
-        return "";
+    public static String walkForward(String projName, String projOwner, List<Classifier> classifiers) {
+        StringBuilder builder = new StringBuilder();
+        String format = "%s,%d,%s,%f,%f,%f,%f\n";
+
+        try {
+            DataSource source = new DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
+            Instances instances = source.getDataSet();
+
+            builder.append("Dataset,#TrainingRelease,Classifier,Precision,Recall,AUC,Kappa\n");
+
+            int numReleases = instances.attribute(0).numValues();
+            List<Instances> instancesList = splitDataSet(instances, numReleases);
+
+            for(int i = 0; i < numReleases - 1; i++) {
+                Instances testing = instancesList.get(i + 1);
+
+                Instances training = new Instances(instancesList.get(0), 0);
+                for(int j = 0; j <= i; j++) {
+                    training.addAll(instancesList.get(j));
+                }
+
+                for(Classifier classifier : classifiers) {
+                    Map<String, Double> map = compareClassifiers(training, testing, classifier);
+
+                    String longName = classifier.getClass().getName();
+                    String[] tokens = longName.split("\\.");
+
+                    String name = tokens[tokens.length - 1];
+
+                    builder.append(String.format(Locale.US, format, projName, i + 1, name, map.get("precision"), map.get("recall"),
+                            map.get("auc"), map.get("kappa")));
+                }
+            }
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to load data source from arff");
+        }
+
+        return builder.toString();
     }
 
     public static void main(String[] argv) throws IOException, GitAPIException {
@@ -197,18 +233,13 @@ public class Main {
 
         generateData(projName, projOwner);
 
-        try {
-            DataSource source = new DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
-            Instances instances = source.getDataSet();
+        List<Classifier> classifiers = new ArrayList<>();
+        classifiers.add(new NaiveBayes());
+        classifiers.add(new RandomForest());
+        classifiers.add(new IBk());
 
-            List<Instances> instancesList = splitDataSet(instances);
-            List<Classifier> classifiers = new ArrayList<>();
-            classifiers.add(new NaiveBayes());
-            classifiers.add(new RandomForest());
+        String result = walkForward(projName, projOwner, classifiers);
 
-            System.out.println(compareClassifiers(instancesList.get(0), instancesList.get(1), classifiers.get(0)));
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Failed to load data source from arff");
-        }
+        Utils.writeCsvFromString(result, projName, projOwner);
     }
 }

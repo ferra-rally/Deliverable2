@@ -52,7 +52,17 @@ public class Utils {
         return builder.toString();
     }
 
-    public static void writeCsv(String projName, String projOwner, List<Release> releases) {
+    public static void writeCsvFromString(String string, String projName, String projOwner) {
+        try (FileWriter csvWriter = new FileWriter(DIRECTORY + projName + "_" + projOwner + "_results.csv")) {
+            csvWriter.write(string);
+
+            LOGGER.log(Level.SEVERE, "Done writing result csv");
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Unable to write final results");
+        }
+    }
+
+    public static void writeCsvReleases(String projName, String projOwner, List<Release> releases) {
         String attributeString = "@ATTRIBUTE ";
         String numericString = " NUMERIC\n";
         //Write output in csv

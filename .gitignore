@@ -1,6 +1,6 @@
 # Project exclude paths
 /target/
 ./github_deliverable_token
-./.idea/sonarlint
+./.idea/sonarlint/
 ./out/
 ./repos/

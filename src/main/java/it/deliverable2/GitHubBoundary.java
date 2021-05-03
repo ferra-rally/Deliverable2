@@ -355,6 +355,7 @@ public class GitHubBoundary {
         for(Release rel : releases) {
             Map<String, ReleaseFile> fileMap = new HashMap<>();
 
+            //Fetch the release file list
             List<ReleaseFile> releaseFileList = getReleaseFileList(rel, localPath);
 
             //Get all release files
@@ -374,7 +375,7 @@ public class GitHubBoundary {
                 }
             }
 
-            //Set addition, deletion and authors
+            //Set metrics
             setTouchedFile(commitsOfRelease, fileMap);
 
             //Set lines of code

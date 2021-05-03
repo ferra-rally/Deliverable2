@@ -1,8 +1,6 @@
 
 Y
 )src/main/java/it/deliverable2/Commit.java,e\5\e59820ecdc4f20c719abc629ebf66c3e6c5ca55c
-X
-(src/main/java/it/deliverable2/Issue.java,5\5\5500318d2f945cc13e4163c196381e32e4afc710
 Z
 *src/main/java/it/deliverable2/Release.java,c\0\c09f08446a217b09ae7f548445c450b9d1f1b3db
 b
@@ -13,8 +11,6 @@ X
 (src/main/java/it/deliverable2/Utils.java,0\4\04ed0c3cb3895716d9bd8439e05db5a91185953c
 _
 /src/main/java/it/deliverable2/JiraBoundary.java,3\5\359f3175d17a5ed85c30a71712f6005905b1acba
-a
-1src/main/java/it/deliverable2/GitHubBoundary.java,1\e\1e2143c384167203263cc06f669a5327ca9bde63
 ]
 -src/main/java/it/deliverable2/CommitFile.java,4\9\49578525e7ef546eefe2aa3454979a656c621651
 ^

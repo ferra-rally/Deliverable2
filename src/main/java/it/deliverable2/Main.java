@@ -3,8 +3,17 @@ package it.deliverable2;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+import weka.classifiers.trees.RandomForest;
+import weka.core.Instances;
+import weka.core.converters.ConverterUtils.DataSource;
+import weka.classifiers.Evaluation;
+import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.Classifier;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -12,6 +21,7 @@ import java.util.logging.Logger;
 public class Main {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     private static final String PROJECTURL = "https://github.com/apache/";
+    private static final String PATH_FORMAT = "./out/%s_%s_out.arff";
 
     public static List<Release> getFirstPercentOfReleases(List<Release> releases, double firstPercentReleases) {
         List<Release> croppedReleasesList = new ArrayList<>();
@@ -34,9 +44,9 @@ public class Main {
     private static HashMap<String, List<Commit>> convertListToHashMap(List<Commit> commitList) {
         HashMap<String, List<Commit>> commitMap = new HashMap<>();
 
-        for(Commit commit : commitList) {
+        for (Commit commit : commitList) {
             String key = commit.getName();
-            if(commitMap.containsKey(key)) {
+            if (commitMap.containsKey(key)) {
                 commitMap.get(key).add(commit);
             } else {
                 List<Commit> commits = new ArrayList<>();
@@ -49,15 +59,17 @@ public class Main {
         return commitMap;
     }
 
-    public static void main(String[] argv) throws IOException, GitAPIException {
+    //Generate data and create files
+    public static void generateData(String projName, String projOwner) throws IOException, GitAPIException {
+        Path path = Paths.get(String.format(PATH_FORMAT, projName, projOwner));
 
-        // git show 357b8fad6464ab25f8e03385ca54d1ce8ec63543 --shortstat --format="" to get stats
-        // git log --  src/java/org/apache/avro/Protocol.java to get file change history
-        // git show --shortstat --format="" 338db27462cbb442a60033f99fde7d92f863b28a -- lang/c++/test/DataFileTests.cc
-        // git log --pretty=format:"{\"hash\":%H, \"commit_date\":%cd, \"author\":%an, \"message\":%s}"
-
-        String projName = "bookkeeper";
-        String projOwner = "apache";
+        //Out file already exists
+        if (Files.exists(path)) {
+            LOGGER.log(Level.INFO, "Found {0} file, returning...", String.format(PATH_FORMAT, projName, projOwner));
+            return;
+        } else {
+            LOGGER.log(Level.INFO, "File {0} not found, generating data...", String.format(PATH_FORMAT, projName, projOwner));
+        }
 
         final File localPath = new File("./repos/" + projName);
 
@@ -118,5 +130,85 @@ public class Main {
 
         //Write CSV
         Utils.writeCsv(projName, projOwner, releases);
+    }
+
+    public static List<Instances> splitDataSet(Instances instances) {
+        List<Instances> setList = new ArrayList<>();
+        int index = 0;
+
+        List<String> releases = new ArrayList<>();
+        int numReleases = instances.attribute(index).numValues();
+
+        for (int i = 0; i < numReleases; i++) {
+            releases.add(instances.attribute(0).value(i));
+        }
+
+        //Separate instances based on the release
+        for (String releaseNumber : releases) {
+            Instances filteredInstances = new Instances(instances, 0); // Empty Instances with same header
+            instances.parallelStream()
+                    .filter(instance -> instance.stringValue(index).equals(releaseNumber))
+                    .forEachOrdered(filteredInstances::add);
+
+            setList.add(filteredInstances);
+
+            filteredInstances.setClassIndex(filteredInstances.numAttributes() - 1);
+        }
+
+        return setList;
+    }
+
+    public static Map<String, Double> compareClassifiers(Instances training, Instances testing, Classifier classifier) throws Exception {
+        Map<String, Double> map = new HashMap<>();
+
+
+        classifier.buildClassifier(training);
+
+        Evaluation eval = new Evaluation(testing);
+
+        eval.evaluateModel(classifier, testing);
+
+        double auc = eval.areaUnderROC(1);
+        double kappa = eval.kappa();
+        double precision = eval.precision(1);
+        double recall = eval.recall(1);
+
+        map.put("auc", auc);
+        map.put("kappa", kappa);
+        map.put("precision", precision);
+        map.put("recall", recall);
+
+        return map;
+    }
+
+    public static String walkForward() {
+        return "";
+    }
+
+    public static void main(String[] argv) throws IOException, GitAPIException {
+
+        // git show 357b8fad6464ab25f8e03385ca54d1ce8ec63543 --shortstat --format="" to get stats
+        // git log --  src/java/org/apache/avro/Protocol.java to get file change history
+        // git show --shortstat --format="" 338db27462cbb442a60033f99fde7d92f863b28a -- lang/c++/test/DataFileTests.cc
+        // git log --pretty=format:"{\"hash\":%H, \"commit_date\":%cd, \"author\":%an, \"message\":%s}"
+
+        String projName = "avro";
+        String projOwner = "apache";
+
+        generateData(projName, projOwner);
+
+        try {
+            DataSource source = new DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
+            Instances instances = source.getDataSet();
+
+            List<Instances> instancesList = splitDataSet(instances);
+            List<Classifier> classifiers = new ArrayList<>();
+            classifiers.add(new NaiveBayes());
+            classifiers.add(new RandomForest());
+
+            System.out.println(compareClassifiers(instancesList.get(0), instancesList.get(1), classifiers.get(0)));
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to load data source from arff");
+        }
     }
 }

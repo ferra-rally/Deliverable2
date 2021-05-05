@@ -471,7 +471,7 @@ public class GitHubBoundary {
     public List<Commit> getCommits(File localPath) throws IOException {
         List<Commit> commitList = new ArrayList<>();
 
-        Process process = runtime.exec("git log --all --numstat --pretty=format:Commit###%H###%ci###%an###%s", null, localPath);
+        Process process = runtime.exec("git log --numstat --pretty=format:Commit###%H###%ci###%an###%s", null, localPath);
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
         Commit prevCommit = new Commit();

@@ -485,6 +485,10 @@ public class GitHubBoundary {
                 String dateString = tokens[2];
                 String author = tokens[3];
                 String message = tokens[4];
+
+                //Ignore merge commits
+                if(message.startsWith("Merge")) continue;
+
                 String name;
 
                 ZonedDateTime dateTime = ZonedDateTime.parse(dateString, formatter);
@@ -514,5 +518,16 @@ public class GitHubBoundary {
         Collections.sort(commitList);
 
         return commitList;
+    }
+
+    public String getNonMergedBranches() {
+        return "";
+    }
+
+    //Get comm
+    public Map<String, Commit> getBranchCommit() {
+        Map<String, Commit> commitMap = new HashMap();
+
+        return commitMap;
     }
 }

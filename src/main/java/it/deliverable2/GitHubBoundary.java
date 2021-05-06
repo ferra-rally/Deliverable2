@@ -314,7 +314,11 @@ public class GitHubBoundary {
 
                     releaseFile.addAddedAndDelition(file.getAddition(), file.getDeletion());
                     releaseFile.addAuthor(commit.getAuthor());
-                    releaseFile.addChgSetSize(touchedFiles.size() - 1);
+
+                    int chgSetSize = touchedFiles.size() - 1;
+                    if(chgSetSize < 0) chgSetSize = 0;
+
+                    releaseFile.addChgSetSize(chgSetSize);
                     releaseFile.addRevision();
                 }
             }

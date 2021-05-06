@@ -542,25 +542,35 @@ public class GitHubBoundary {
     }
 
     //Get the version of the fixed ticket
-    public Map<String, String> getBranchFixedTickets(File localPath) throws IOException {
+    public Map<String, Release> getBranchFixedTickets(List<Release> releases, File localPath) throws IOException {
         List<String> branchList = getNonMergedBranches(localPath);
-        Map<String, String> ticketMap = new HashMap<>();
+        Map<String, Release> ticketMap = new HashMap<>();
 
         for(String branch : branchList) {
             String branchName = branch.split("-")[1];
 
-            Process process = runtime.exec("git log --pretty=format:%s " + branch, null, localPath);
+            Release release = null;
+
+            //Find Release of the maintaned branch
+            for(Release rel : releases) {
+                String relName = rel.getName();
+                if (relName.startsWith(branchName)) {
+                    release = rel;
+                }
+            }
+            
+            //Log commit since the release branch
+            assert release != null;
+            Process process = runtime.exec("git log --pretty=format:%s " + branch + " --since=" + release.getDate(), null, localPath);
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
             String line;
             while((line = reader.readLine()) != null) {
                 String name = getCommitName(line);
 
-                System.out.println(branchName + "###" + name);
-
-                //If there is a ticket
+                //If there is a ticket put the fix version in the map
                 if(!name.equals(line)) {
-                    ticketMap.put(name, branchName);
+                    ticketMap.put(name, release);
                 }
             }
         }

@@ -18,6 +18,10 @@ import java.util.logging.Logger;
 
 public class JiraBoundary {
     private static final Logger LOGGER = Logger.getLogger(JiraBoundary.class.getName());
+    private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+            .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            .appendPattern("XX")
+            .toFormatter();
 
     private Release findRelease(ZonedDateTime dateTime, List<Release> allReleases) {
         Collections.sort(allReleases);
@@ -54,30 +58,6 @@ public class JiraBoundary {
             String jsonText = readAll(rd);
             return new JSONObject(jsonText);
         }
-    }
-
-    //Get the last fixed version if there are multiple
-    private Release findFixed(JSONArray fixVersionArray, ZonedDateTime resolutionDate, Map<String, Release> releaseMap) {
-        List<Release> fixedVersions = new ArrayList<>();
-
-        //Get fixed versions
-        for (int x = 0; x < fixVersionArray.length(); x++) {
-            String version = fixVersionArray.getJSONObject(x).getString("name");
-            fixedVersions.add(releaseMap.get(version));
-        }
-
-        //Use date to find fixed version
-        if (fixedVersions.isEmpty()) {
-            fixedVersions.add(findRelease(resolutionDate, new ArrayList<>(releaseMap.values())));
-        }
-
-        Release fixVersion = fixedVersions.get(0);
-
-        for (int i = 1; i < fixedVersions.size(); i++) {
-            if (fixVersion.compareTo(fixedVersions.get(i)) < 0) fixVersion = fixedVersions.get(i);
-        }
-
-        return fixVersion;
     }
 
     //Get the first affected version if there are multiple
@@ -124,35 +104,63 @@ public class JiraBoundary {
         return releases.get(injectedNumber - 1);
     }
 
-    public ZonedDateTime findFixedTime(String key, Map<String, List<Commit>> commitMap, JSONObject fieldsObject, DateTimeFormatter formatter) {
-        //If the commit is available get the date
-        if (commitMap.containsKey(key)) {
-            //Get the last commit in order of date
-            List<Commit> commitList = commitMap.get(key);
+    private Release findFixed(String key, Map<String, List<Commit>> commitMap, JSONObject jsonObject, Map<String, Release> releaseMap, Map<String, Release> ticketMap) {
+        JSONObject fieldsObject = jsonObject.getJSONObject("fields");
+        JSONArray fixVersionArray = fieldsObject.getJSONArray("fixVersions");
 
-            Collections.sort(commitList);
+        if(!fixVersionArray.isEmpty()) {
+            //If the fix version is present in jira get the last one
 
-            //Get the last commit
-            return commitList.get(commitList.size() - 1).getDate();
+            //Search the fix version in jira
+            List<Release> fixedVersions = new ArrayList<>();
+
+            //Get fixed versions
+            for (int x = 0; x < fixVersionArray.length(); x++) {
+                String version = fixVersionArray.getJSONObject(x).getString("name");
+                fixedVersions.add(releaseMap.get(version));
+            }
+
+            Release fixVersion = fixedVersions.get(0);
+
+            //If there are multiple fix version return the last
+            for (int i = 1; i < fixedVersions.size(); i++) {
+                if (fixVersion.compareTo(fixedVersions.get(i)) < 0) fixVersion = fixedVersions.get(i);
+            }
+
+            return fixVersion;
+
         } else {
-            //If commit is not available use jira
-            String dateString = fieldsObject.getString("resolutiondate");
+            //There aren't fix versions in jira, use the date to get it
 
-            return ZonedDateTime.parse(dateString, formatter);
+            //If the commit is available get the date and return the version
+            if (commitMap.containsKey(key)) {
+                //Get the last commit in order of date
+                List<Commit> commitList = commitMap.get(key);
+
+                Collections.sort(commitList);
+
+                //Get the last commit
+                ZonedDateTime fixDate = commitList.get(commitList.size() - 1).getDate();
+                return findRelease(fixDate, new ArrayList<>(releaseMap.values()));
+            } else if(ticketMap.containsKey(key)) {
+                //Check if the ticket is fixed in a branch
+                return ticketMap.get(key);
+            } else {
+                //If commit is not available use jira date
+                String dateString = fieldsObject.getString("resolutiondate");
+
+                ZonedDateTime fixDate =  ZonedDateTime.parse(dateString, formatter);
+                return findRelease(fixDate, new ArrayList<>(releaseMap.values()));
+            }
         }
     }
 
-    public List<Issue> getBugs(String projName, List<Release> allReleases, Map<String, List<Commit>> commitMap) throws IOException {
+    public List<Issue> getBugs(String projName, List<Release> allReleases, Map<String, List<Commit>> commitMap, Map<String, Release> ticketMap) throws IOException {
         List<Issue> issuesList = new ArrayList<>();
         List<Double> proportionList = new ArrayList<>();
 
         //TODO use 0.5?
         proportionList.add(0.5);
-
-        DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-                .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                .appendPattern("XX")
-                .toFormatter();
 
         //Create a map with all releases
         Map<String, Release> releaseMap = new HashMap<>();
@@ -180,7 +188,6 @@ public class JiraBoundary {
                 JSONObject fieldsObject = jsonObject.getJSONObject("fields");
                 //Get affected versions
                 JSONArray affectedVersionArray = fieldsObject.getJSONArray("versions");
-                JSONArray fixVersionArray = fieldsObject.getJSONArray("fixVersions");
                 String key = jsonObject.getString("key");
 
                 List<Release> affectedVersions = new ArrayList<>();
@@ -190,9 +197,8 @@ public class JiraBoundary {
 
                 Release openingVersion = findRelease(creationDate, allReleases);
 
-                ZonedDateTime resolutionDate = findFixedTime(key, commitMap, fieldsObject, formatter);
-
-                Release fixed = findFixed(fixVersionArray, resolutionDate, releaseMap);
+                Release fixed = findFixed(key, commitMap, jsonObject, releaseMap, ticketMap);
+                ZonedDateTime resolutionDate = fixed.getDate();
 
                 Release injected;
 
@@ -222,7 +228,7 @@ public class JiraBoundary {
     //Get releases from Jira
     public List<Release> getReleases(String projName, File localPath) throws IOException {
         List<Release> releasesList = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter formatterRelease = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         String url = "https://issues.apache.org/jira/rest/api/2/project/" + projName.toUpperCase(Locale.ROOT);
 
@@ -239,7 +245,7 @@ public class JiraBoundary {
                 zonedDateTime = new GitHubBoundary().getReleaseDate(name, localPath);
             } else {
                 String dateString = versionJSON.getString("releaseDate");
-                LocalDate date = LocalDate.parse(dateString, formatter);
+                LocalDate date = LocalDate.parse(dateString, formatterRelease);
 
                 //Missing timezone information, default to Greenwich
                 zonedDateTime = date.atStartOfDay(ZoneId.of("UTC"));

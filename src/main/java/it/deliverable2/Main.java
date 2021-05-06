@@ -94,10 +94,10 @@ public class Main {
         List<Release> releases = getFirstPercentOfReleases(allReleases, 0.5);
         LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
 
-        LOGGER.log(Level.INFO, "Fetching branches commits...");
-        Map<String, String> ticketMap = gitHubBoundary.getBranchFixedTickets(localPath);
-        System.out.println(ticketMap);
-        LOGGER.log(Level.INFO, "Done searching unmerged branch commits");
+        //Get the tickets that are committed in a branch
+        LOGGER.log(Level.INFO, "Fetching branches committed tickets...");
+        Map<String, Release> ticketMap = gitHubBoundary.getBranchFixedTickets(allReleases, localPath);
+        LOGGER.log(Level.INFO, "Done searching unmerged branch tickets");
 
         LOGGER.log(Level.INFO, "Fetching commits...");
         List<Commit> commitList = gitHubBoundary.getCommits(localPath);
@@ -105,7 +105,7 @@ public class Main {
         LOGGER.log(Level.INFO, "Number of commits: {0}", commitList.size());
 
         LOGGER.log(Level.INFO, "Fetching issues...");
-        List<Issue> issues = jiraBoundary.getBugs(projName, allReleases, commitMap);
+        List<Issue> issues = jiraBoundary.getBugs(projName, allReleases, commitMap, ticketMap);
         LOGGER.log(Level.INFO, "Number of issues: {0}", issues.size());
 
         gitHubBoundary.assignFilesToReleases(releases, commitList, localPath);

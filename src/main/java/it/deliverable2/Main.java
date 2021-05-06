@@ -94,6 +94,11 @@ public class Main {
         List<Release> releases = getFirstPercentOfReleases(allReleases, 0.5);
         LOGGER.log(Level.INFO, "Number of releases: {0}", releases.size());
 
+        LOGGER.log(Level.INFO, "Fetching branches commits...");
+        Map<String, String> ticketMap = gitHubBoundary.getBranchFixedTickets(localPath);
+        System.out.println(ticketMap);
+        LOGGER.log(Level.INFO, "Done searching unmerged branch commits");
+
         LOGGER.log(Level.INFO, "Fetching commits...");
         List<Commit> commitList = gitHubBoundary.getCommits(localPath);
         HashMap<String, List<Commit>> commitMap = convertListToHashMap(commitList);

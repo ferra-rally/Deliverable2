@@ -524,14 +524,47 @@ public class GitHubBoundary {
         return commitList;
     }
 
-    public String getNonMergedBranches() {
-        return "";
+    //Get non merged branches that maintain older versions
+    private List<String> getNonMergedBranches(File localPath) throws IOException {
+        Process process = runtime.exec("git branch -r --no-merge", null, localPath);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        List<String> branchList = new ArrayList<>();
+
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (line.startsWith("  origin/branch-")) {
+                branchList.add(line);
+            }
+        }
+
+        return branchList;
     }
 
-    //Get comm
-    public Map<String, Commit> getBranchCommit() {
-        Map<String, Commit> commitMap = new HashMap();
+    //Get the version of the fixed ticket
+    public Map<String, String> getBranchFixedTickets(File localPath) throws IOException {
+        List<String> branchList = getNonMergedBranches(localPath);
+        Map<String, String> ticketMap = new HashMap<>();
 
-        return commitMap;
+        for(String branch : branchList) {
+            String branchName = branch.split("-")[1];
+
+            Process process = runtime.exec("git log --pretty=format:%s " + branch, null, localPath);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String line;
+            while((line = reader.readLine()) != null) {
+                String name = getCommitName(line);
+
+                System.out.println(branchName + "###" + name);
+
+                //If there is a ticket
+                if(!name.equals(line)) {
+                    ticketMap.put(name, branchName);
+                }
+            }
+        }
+
+        return ticketMap;
     }
 }

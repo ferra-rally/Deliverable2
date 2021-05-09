@@ -172,10 +172,10 @@ public class Main {
 
         eval.evaluateModel(classifier, testing);
 
-        double auc = eval.areaUnderROC(0);
+        double auc = eval.areaUnderROC(1);
         double kappa = eval.kappa();
-        double precision = eval.precision(0);
-        double recall = eval.recall(0);
+        double precision = eval.precision(1);
+        double recall = eval.recall(1);
 
         String precisionString;
         if(Double.isNaN(precision)) {

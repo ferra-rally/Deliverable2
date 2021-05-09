@@ -163,8 +163,8 @@ public class Main {
         return setList;
     }
 
-    public static Map<String, Double> compareClassifiers(Instances training, Instances testing, Classifier classifier) throws Exception {
-        Map<String, Double> map = new HashMap<>();
+    public static Map<String, String> compareClassifiers(Instances training, Instances testing, Classifier classifier) throws Exception {
+        Map<String, String> map = new HashMap<>();
 
         classifier.buildClassifier(training);
 
@@ -177,17 +177,24 @@ public class Main {
         double precision = eval.precision(0);
         double recall = eval.recall(0);
 
-        map.put("auc", auc);
-        map.put("kappa", kappa);
-        map.put("precision", precision);
-        map.put("recall", recall);
+        String precisionString;
+        if(Double.isNaN(precision)) {
+            precisionString = "?";
+        } else {
+            precisionString = precision + "";
+        }
+
+        map.put("auc", auc + "");
+        map.put("kappa", kappa + "");
+        map.put("precision", precisionString);
+        map.put("recall", recall + "");
 
         return map;
     }
 
     public static String walkForward(String projName, String projOwner, List<Classifier> classifiers) {
         StringBuilder builder = new StringBuilder();
-        String format = "%s,%d,%s,%f,%f,%f,%f\n";
+        String format = "%s,%d,%s,%s,%s,%s,%s\n";
 
         try {
             DataSource source = new DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
@@ -207,7 +214,7 @@ public class Main {
                 }
 
                 for(Classifier classifier : classifiers) {
-                    Map<String, Double> map = compareClassifiers(training, testing, classifier);
+                    Map<String, String> map = compareClassifiers(training, testing, classifier);
 
                     String longName = classifier.getClass().getName();
                     String[] tokens = longName.split("\\.");

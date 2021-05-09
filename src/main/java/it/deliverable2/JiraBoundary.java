@@ -94,6 +94,9 @@ public class JiraBoundary {
     }
 
     private Release findInjectedVersionProportion(List<Double> proportionList, List<Release> releases, Release fixedVersion, Release openingVersion) {
+        //If proportion is missing return opening version
+        if(proportionList.isEmpty()) return openingVersion;
+
         //Implements incremental proportion
         double proportion = proportionList.get((int) Math.floor((proportionList.size() * 1.0) / 2));
 
@@ -158,9 +161,6 @@ public class JiraBoundary {
     public List<Issue> getBugs(String projName, List<Release> allReleases, Map<String, List<Commit>> commitMap, Map<String, Release> ticketMap) throws IOException {
         List<Issue> issuesList = new ArrayList<>();
         List<Double> proportionList = new ArrayList<>();
-
-        //TODO use 0.5?
-        proportionList.add(0.5);
 
         //Create a map with all releases
         Map<String, Release> releaseMap = new HashMap<>();

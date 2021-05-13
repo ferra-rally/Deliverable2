@@ -52,8 +52,8 @@ public class Utils {
         return builder.toString();
     }
 
-    public static void writeCsvFromString(String string, String projName, String projOwner) {
-        try (FileWriter csvWriter = new FileWriter(DIRECTORY + projName + "_" + projOwner + "_results.csv")) {
+    public static void writeCsvFromString(String string) {
+        try (FileWriter csvWriter = new FileWriter(DIRECTORY + "results.csv")) {
             csvWriter.write(string);
 
             LOGGER.log(Level.SEVERE, "Done writing result csv");

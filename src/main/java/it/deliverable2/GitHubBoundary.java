@@ -558,9 +558,12 @@ public class GitHubBoundary {
                     release = rel;
                 }
             }
-            
+
             //Log commit since the release branch
-            assert release != null;
+            if(release == null) {
+                continue;
+            }
+
             Process process = runtime.exec("git log --pretty=format:%s " + branch + " --since=" + release.getDate(), null, localPath);
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 

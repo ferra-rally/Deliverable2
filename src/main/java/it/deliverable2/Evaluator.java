@@ -73,13 +73,13 @@ public class Evaluator {
 
     public String walkForward(String projName, String projOwner, List<Classifier> classifiers) {
         StringBuilder builder = new StringBuilder();
-        String format = "%s,%d,%s,%.0f,%.0f,%.0f,%.0f,%s,%f,%f,%f\n";
+        String format = "%s,%d,%.0f%%,%s,%.0f,%.0f,%.0f,%.0f,%s,%f,%f,%f\n";
 
         try {
             ConverterUtils.DataSource source = new ConverterUtils.DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
             Instances instances = source.getDataSet();
             //dataset, #TrainingRelease, %training (data on training / total data), %Defective in training, %Defective in testing, EPVbeforeFeatureSelection, EPVafterFeatureSelection,classifier, balancing, Feature Selection,TP,  FP,  TN, FN, Precision, Recall, ROC Area, Kappa
-            builder.append("Dataset,#TrainingRelease,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
+            builder.append("Dataset,#TrainingRelease,%training,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
 
             int numReleases = instances.attribute(0).numValues();
             List<Instances> instancesList = splitDataSet(instances, numReleases);
@@ -91,6 +91,11 @@ public class Evaluator {
                 for(int j = 0; j <= i; j++) {
                     training.addAll(instancesList.get(j));
                 }
+
+                int trainingSize = training.size();
+                int testingSize = testing.size();
+
+                double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;
 
                 for(Classifier classifier : classifiers) {
                     Map<String, Double> map = compareClassifiers(training, testing, classifier);
@@ -108,7 +113,7 @@ public class Evaluator {
                     String name = tokens[tokens.length - 1];
 
                     String row = String.format(Locale.US, format,
-                            projName, i + 1, name,
+                            projName, i + 1, percentTraining, name,
                             map.get("tp"), map.get("fp"), map.get("tn"), map.get("fn"),
                             precisionString, map.get("recall"), map.get("auc"), map.get("kappa"));
 

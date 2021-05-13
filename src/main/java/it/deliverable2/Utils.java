@@ -56,7 +56,7 @@ public class Utils {
         try (FileWriter csvWriter = new FileWriter(DIRECTORY + "results.csv")) {
             csvWriter.write(string);
 
-            LOGGER.log(Level.SEVERE, "Done writing result csv");
+            LOGGER.log(Level.INFO, "Done writing result csv");
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Unable to write final results");
         }

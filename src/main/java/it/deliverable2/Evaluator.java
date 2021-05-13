@@ -37,8 +37,10 @@ public class Evaluator {
         return setList;
     }
 
-    public Map<String, String> compareClassifiers(Instances training, Instances testing, Classifier classifier) throws Exception {
-        Map<String, String> map = new HashMap<>();
+    public Map<String, Double> compareClassifiers(Instances training, Instances testing, Classifier classifier) throws Exception {
+        Map<String, Double> map = new HashMap<>();
+
+        int classIndex = 0;
 
         classifier.buildClassifier(training);
 
@@ -46,35 +48,38 @@ public class Evaluator {
 
         eval.evaluateModel(classifier, testing);
 
-        double auc = eval.areaUnderROC(0);
+        double auc = eval.areaUnderROC(classIndex);
         double kappa = eval.kappa();
-        double precision = eval.precision(0);
-        double recall = eval.recall(0);
+        double precision = eval.precision(classIndex);
+        double recall = eval.recall(classIndex);
 
-        String precisionString;
-        if(Double.isNaN(precision)) {
-            precisionString = "?";
-        } else {
-            precisionString = precision + "";
-        }
+        double tp = eval.numTruePositives(classIndex);
+        double tn = eval.numTrueNegatives(classIndex);
+        double fp = eval.numFalsePositives(classIndex);
+        double fn = eval.numFalseNegatives(classIndex);
 
-        map.put("auc", auc + "");
-        map.put("kappa", kappa + "");
-        map.put("precision", precisionString);
-        map.put("recall", recall + "");
+        map.put("auc", auc);
+        map.put("kappa", kappa);
+        map.put("precision", precision);
+        map.put("recall", recall);
+
+        map.put("tp", tp);
+        map.put("fp", fp);
+        map.put("tn", tn);
+        map.put("fn", fn);
 
         return map;
     }
 
     public String walkForward(String projName, String projOwner, List<Classifier> classifiers) {
         StringBuilder builder = new StringBuilder();
-        String format = "%s,%d,%s,%s,%s,%s,%s\n";
+        String format = "%s,%d,%s,%.0f,%.0f,%.0f,%.0f,%s,%f,%f,%f\n";
 
         try {
             ConverterUtils.DataSource source = new ConverterUtils.DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
             Instances instances = source.getDataSet();
-
-            builder.append("Dataset,#TrainingRelease,Classifier,Precision,Recall,AUC,Kappa\n");
+            //dataset, #TrainingRelease, %training (data on training / total data), %Defective in training, %Defective in testing, EPVbeforeFeatureSelection, EPVafterFeatureSelection,classifier, balancing, Feature Selection,TP,  FP,  TN, FN, Precision, Recall, ROC Area, Kappa
+            builder.append("Dataset,#TrainingRelease,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
 
             int numReleases = instances.attribute(0).numValues();
             List<Instances> instancesList = splitDataSet(instances, numReleases);
@@ -88,20 +93,31 @@ public class Evaluator {
                 }
 
                 for(Classifier classifier : classifiers) {
-                    Map<String, String> map = compareClassifiers(training, testing, classifier);
+                    Map<String, Double> map = compareClassifiers(training, testing, classifier);
 
+                    double precision = map.get("precision");
+                    String precisionString;
+                    if(Double.isNaN(precision)) {
+                        precisionString = "?";
+                    } else {
+                        precisionString = precision + "";
+                    }
                     String longName = classifier.getClass().getName();
                     String[] tokens = longName.split("\\.");
 
                     String name = tokens[tokens.length - 1];
 
-                    builder.append(String.format(Locale.US, format, projName, i + 1, name, map.get("precision"), map.get("recall"),
-                            map.get("auc"), map.get("kappa")));
+                    String row = String.format(Locale.US, format,
+                            projName, i + 1, name,
+                            map.get("tp"), map.get("fp"), map.get("tn"), map.get("fn"),
+                            precisionString, map.get("recall"), map.get("auc"), map.get("kappa"));
+
+                    builder.append(row);
                 }
             }
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Failed to load data source from arff");
+            LOGGER.log(Level.SEVERE, "Error when evaluating");
         }
 
         return builder.toString();

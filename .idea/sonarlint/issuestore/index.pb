@@ -14,3 +14,7 @@ H.idea/libraries/org_apache_maven_plugins_maven_compiler_plugin_3_8_1.xml,4\b\4
 :
 
 .gitignore,a\5\a5cc2925ca8258af241be7e5b0381edf30266302
+^
+.src/main/java/it/deliverable2/ReleaseFile.java,0\5\057c606c377a49e19ed0fd18e957cafcd9fe03b2
+Z
+*src/main/java/it/deliverable2/Release.java,c\0\c09f08446a217b09ae7f548445c450b9d1f1b3db

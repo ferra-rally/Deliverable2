@@ -71,7 +71,7 @@ public class Evaluator {
         return map;
     }
 
-    public String walkForward(String projName, String projOwner, List<Classifier> classifiers) {
+    private String walkForward(String projName, String projOwner, List<Classifier> classifiers) {
         StringBuilder builder = new StringBuilder();
         String format = "%s,%d,%.0f%%,%s,%.0f,%.0f,%.0f,%.0f,%s,%f,%f,%f\n";
 
@@ -79,7 +79,6 @@ public class Evaluator {
             ConverterUtils.DataSource source = new ConverterUtils.DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
             Instances instances = source.getDataSet();
             //dataset, #TrainingRelease, %training (data on training / total data), %Defective in training, %Defective in testing, EPVbeforeFeatureSelection, EPVafterFeatureSelection,classifier, balancing, Feature Selection,TP,  FP,  TN, FN, Precision, Recall, ROC Area, Kappa
-            builder.append("Dataset,#TrainingRelease,%training,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
 
             int numReleases = instances.attribute(0).numValues();
             List<Instances> instancesList = splitDataSet(instances, numReleases);
@@ -123,6 +122,17 @@ public class Evaluator {
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error when evaluating");
+        }
+
+        return builder.toString();
+    }
+
+    public String walkForward(List<String> projectList, String projOwner, List<Classifier> classifiers) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Dataset,#TrainingRelease,%training,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
+
+        for(String projName : projectList) {
+            builder.append(walkForward(projName, projOwner, classifiers));
         }
 
         return builder.toString();

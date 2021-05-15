@@ -159,7 +159,7 @@ public class Main {
 
         Evaluator evaluator = new Evaluator();
 
-        String result = evaluator.walkForward("avro", projOwner, classifiers);
+        String result = evaluator.walkForward(projList, projOwner, classifiers);
 
         Utils.writeCsvFromString(result);
     }

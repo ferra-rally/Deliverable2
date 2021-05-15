@@ -8,6 +8,11 @@ import weka.classifiers.trees.RandomForest;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.Classifier;
 
+import weka.filters.Filter;
+import weka.filters.supervised.instance.SMOTE;
+import weka.filters.supervised.instance.SpreadSubsample;
+import weka.filters.supervised.instance.Resample;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -135,7 +140,7 @@ public class Main {
         Utils.writeCsvReleases(projName, projOwner, releases);
     }
 
-    public static void main(String[] argv) throws IOException, GitAPIException {
+    public static void main(String[] argv) throws Exception {
 
         // git show 357b8fad6464ab25f8e03385ca54d1ce8ec63543 --shortstat --format="" to get stats
         // git log --  src/java/org/apache/avro/Protocol.java to get file change history
@@ -157,9 +162,17 @@ public class Main {
         classifiers.add(new RandomForest());
         classifiers.add(new IBk());
 
+        List<Filter> filters = new ArrayList<>();
+        //SMOTE
+        filters.add(new SMOTE());
+        //Undersampling
+        filters.add(new SpreadSubsample());
+        //Oversampling
+        filters.add(new Resample());
+
         Evaluator evaluator = new Evaluator();
 
-        String result = evaluator.walkForward(projList, projOwner, classifiers);
+        String result = evaluator.walkForward(projList, projOwner, classifiers, filters);
 
         Utils.writeCsvFromString(result);
     }

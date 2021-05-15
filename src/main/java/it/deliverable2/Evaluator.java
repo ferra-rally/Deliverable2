@@ -5,9 +5,11 @@ import weka.classifiers.Evaluation;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
+import weka.filters.Filter;
+import weka.filters.supervised.instance.Resample;
+import weka.filters.supervised.instance.SpreadSubsample;
 
 import java.util.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Evaluator {
@@ -82,11 +84,73 @@ public class Evaluator {
         return map;
     }
 
-    private String walkForward(String projName, String projOwner, List<Classifier> classifiers) {
-        StringBuilder builder = new StringBuilder();
-        String format = "%s,%d,%.0f%%,%.0f%%,%.0f%%,%s,%.0f,%.0f,%.0f,%.0f,%s,%f,%f,%f\n";
+    private List<Object> applyFilter(Instances instances, List<Filter> filters, int filterNumber) throws Exception {
+        List<Object> list = new ArrayList<>();
+        Filter filter;
 
-        try {
+        //Apply filters, if filter number is equal to -1
+        if(filterNumber == -1) {
+            list.add("no_sampling");
+            list.add(instances);
+
+            return list;
+        } else {
+            filter = filters.get(filterNumber);
+        }
+
+        if(filter.getClass().getName().contains("SMOTE")) {
+                //SMOTE
+            list.add("SMOTE");
+            //TODO IMPLEMENT SMOTE
+            list.add(instances);
+        } else if(filters.get(filterNumber).getClass().getName().contains("SpreadSubsample")) {
+            //Undersampling
+            SpreadSubsample undersampling = (SpreadSubsample) filter;
+            undersampling.setDistributionSpread(1.0);
+            undersampling.setInputFormat(instances);
+
+            list.add("undersampling");
+            list.add(Filter.useFilter(instances, filter));
+        } else if(filters.get(filterNumber).getClass().getName().contains("Resample")) {
+            //Oversampling
+            Resample oversample = (Resample) filter;
+            oversample.setInputFormat(instances);
+            oversample.setBiasToUniformClass(1.0);
+            oversample.setNoReplacement(false);
+
+            int positiveClasses = (int) countPositiveInstances(instances);
+            int size = instances.size();
+
+            int majority;
+            int minority;
+
+            if(positiveClasses > (size / 2)) {
+                majority = positiveClasses;
+                minority = size - positiveClasses;
+            } else {
+                minority = positiveClasses;
+                majority = size - positiveClasses;
+            }
+
+            double y = 0;
+            if(minority != 0) {
+                y = 100 * (1.0 * majority - minority) / minority;
+            }
+
+            oversample.setSampleSizePercent(y);
+
+            list.add("oversample");
+            list.add(Filter.useFilter(instances, filter));
+        }
+
+        return list;
+    }
+
+
+    private String walkForward(String projName, String projOwner, List<Classifier> classifiers, List<Filter> filters) throws Exception {
+        StringBuilder builder = new StringBuilder();
+        String format = "%s,%d,%.0f%%,%.0f%%,%.0f%%,%s,%s,%.0f,%.0f,%.0f,%.0f,%s,%f,%f,%f\n";
+
             ConverterUtils.DataSource source = new ConverterUtils.DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
             Instances instances = source.getDataSet();
             //dataset, #TrainingRelease, %training (data on training / total data), %Defective in training, %Defective in testing, EPVbeforeFeatureSelection, EPVafterFeatureSelection,classifier, balancing, Feature Selection,TP,  FP,  TN, FN, Precision, Recall, ROC Area, Kappa
@@ -94,63 +158,71 @@ public class Evaluator {
             int numReleases = instances.attribute(0).numValues();
             List<Instances> instancesList = splitDataSet(instances, numReleases);
 
+            //Walk forward
             for(int i = 0; i < numReleases - 1; i++) {
                 Instances testing = new Instances(instancesList.get(0), 0);
                 testing.addAll(instancesList.get(i + 1));
 
                 Instances training = new Instances(instancesList.get(0), 0);
-                for(int j = 0; j <= i; j++) {
+                for (int j = 0; j <= i; j++) {
                     training.addAll(instancesList.get(j));
                 }
 
-                int trainingSize = training.size();
-                int testingSize = testing.size();
+                //Test different filters
+                for (int filterNumber = -1; filterNumber < filters.size(); filterNumber++) {
+                    Instances sampledTraining;
 
-                double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;
+                    List<Object> filterOut = applyFilter(training, filters, filterNumber);
+                    String filterName = (String) filterOut.get(0);
+                    sampledTraining = (Instances) filterOut.get(1);
 
-                double trainingPositiveInstances = countPositiveInstances(training);
-                double testingPositiveInstances = countPositiveInstances(testing);
+                    int trainingSize = sampledTraining.size();
+                    int testingSize = testing.size();
 
-                double defectiveTrainingPercent = (trainingPositiveInstances / trainingSize) * 100;
-                double defectiveTestingPercent = (testingPositiveInstances / testingSize) * 100;
+                    double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;
 
-                for(Classifier classifier : classifiers) {
-                    Map<String, Double> map = compareClassifiers(training, testing, classifier);
+                    double trainingPositiveInstances = countPositiveInstances(sampledTraining);
+                    double testingPositiveInstances = countPositiveInstances(testing);
 
-                    double precision = map.get("precision");
-                    String precisionString;
-                    if(Double.isNaN(precision)) {
-                        precisionString = "?";
-                    } else {
-                        precisionString = precision + "";
+                    double defectiveTrainingPercent = (trainingPositiveInstances / trainingSize) * 100;
+                    double defectiveTestingPercent = (testingPositiveInstances / testingSize) * 100;
+
+                    for (Classifier classifier : classifiers) {
+                        Map<String, Double> map = compareClassifiers(sampledTraining, testing, classifier);
+
+                        double precision = map.get("precision");
+                        String precisionString;
+                        if (Double.isNaN(precision)) {
+                            precisionString = "?";
+                        } else {
+                            precisionString = precision + "";
+                        }
+                        String longName = classifier.getClass().getName();
+                        String[] tokens = longName.split("\\.");
+
+                        String name = tokens[tokens.length - 1];
+
+                        String row = String.format(Locale.US, format,
+                                projName, i + 1, percentTraining, defectiveTrainingPercent, defectiveTestingPercent, filterName,
+                                name,
+                                map.get("tp"), map.get("fp"), map.get("tn"), map.get("fn"),
+                                precisionString, map.get("recall"), map.get("auc"), map.get("kappa"));
+
+                        builder.append(row);
                     }
-                    String longName = classifier.getClass().getName();
-                    String[] tokens = longName.split("\\.");
-
-                    String name = tokens[tokens.length - 1];
-
-                    String row = String.format(Locale.US, format,
-                            projName, i + 1, percentTraining, defectiveTrainingPercent, defectiveTestingPercent, name,
-                            map.get("tp"), map.get("fp"), map.get("tn"), map.get("fn"),
-                            precisionString, map.get("recall"), map.get("auc"), map.get("kappa"));
-
-                    builder.append(row);
                 }
             }
 
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error when evaluating");
-        }
 
         return builder.toString();
     }
 
-    public String walkForward(List<String> projectList, String projOwner, List<Classifier> classifiers) {
+    public String walkForward(List<String> projectList, String projOwner, List<Classifier> classifiers, List<Filter> filters) throws Exception {
         StringBuilder builder = new StringBuilder();
-        builder.append("Dataset,#TrainingRelease,%training,%Defective_in_training,%Defective_in_testing,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
+        builder.append("Dataset,#TrainingRelease,%training,%Defective_in_training,%Defective_in_testing,Filter,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
 
         for(String projName : projectList) {
-            builder.append(walkForward(projName, projOwner, classifiers));
+            builder.append(walkForward(projName, projOwner, classifiers, filters));
         }
 
         return builder.toString();

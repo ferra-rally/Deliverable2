@@ -2,6 +2,7 @@ package it.deliverable2;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
+import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
 
@@ -35,6 +36,16 @@ public class Evaluator {
         }
 
         return setList;
+    }
+
+    private double countPositiveInstances(Instances instances) {
+        double count = 0;
+
+        for(Instance instance : instances) {
+            count += (int) instance.value(instance.numAttributes() - 1) == 1 ? 1 : 0;
+        }
+
+        return count;
     }
 
     public Map<String, Double> compareClassifiers(Instances training, Instances testing, Classifier classifier) throws Exception {
@@ -73,7 +84,7 @@ public class Evaluator {
 
     private String walkForward(String projName, String projOwner, List<Classifier> classifiers) {
         StringBuilder builder = new StringBuilder();
-        String format = "%s,%d,%.0f%%,%s,%.0f,%.0f,%.0f,%.0f,%s,%f,%f,%f\n";
+        String format = "%s,%d,%.0f%%,%.0f%%,%.0f%%,%s,%.0f,%.0f,%.0f,%.0f,%s,%f,%f,%f\n";
 
         try {
             ConverterUtils.DataSource source = new ConverterUtils.DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
@@ -84,7 +95,8 @@ public class Evaluator {
             List<Instances> instancesList = splitDataSet(instances, numReleases);
 
             for(int i = 0; i < numReleases - 1; i++) {
-                Instances testing = instancesList.get(i + 1);
+                Instances testing = new Instances(instancesList.get(0), 0);
+                testing.addAll(instancesList.get(i + 1));
 
                 Instances training = new Instances(instancesList.get(0), 0);
                 for(int j = 0; j <= i; j++) {
@@ -95,6 +107,12 @@ public class Evaluator {
                 int testingSize = testing.size();
 
                 double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;
+
+                double trainingPositiveInstances = countPositiveInstances(training);
+                double testingPositiveInstances = countPositiveInstances(testing);
+
+                double defectiveTrainingPercent = (trainingPositiveInstances / trainingSize) * 100;
+                double defectiveTestingPercent = (testingPositiveInstances / testingSize) * 100;
 
                 for(Classifier classifier : classifiers) {
                     Map<String, Double> map = compareClassifiers(training, testing, classifier);
@@ -112,7 +130,7 @@ public class Evaluator {
                     String name = tokens[tokens.length - 1];
 
                     String row = String.format(Locale.US, format,
-                            projName, i + 1, percentTraining, name,
+                            projName, i + 1, percentTraining, defectiveTrainingPercent, defectiveTestingPercent, name,
                             map.get("tp"), map.get("fp"), map.get("tn"), map.get("fn"),
                             precisionString, map.get("recall"), map.get("auc"), map.get("kappa"));
 
@@ -129,7 +147,7 @@ public class Evaluator {
 
     public String walkForward(List<String> projectList, String projOwner, List<Classifier> classifiers) {
         StringBuilder builder = new StringBuilder();
-        builder.append("Dataset,#TrainingRelease,%training,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
+        builder.append("Dataset,#TrainingRelease,%training,%Defective_in_training,%Defective_in_testing,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
 
         for(String projName : projectList) {
             builder.append(walkForward(projName, projOwner, classifiers));

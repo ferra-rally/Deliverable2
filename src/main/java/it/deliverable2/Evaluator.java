@@ -7,6 +7,7 @@ import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
 import weka.filters.Filter;
 import weka.filters.supervised.instance.Resample;
+import weka.filters.supervised.instance.SMOTE;
 import weka.filters.supervised.instance.SpreadSubsample;
 
 import java.util.*;
@@ -85,6 +86,29 @@ public class Evaluator {
         return map;
     }
 
+    private double calculateY(Instances instances) {
+        int positiveClasses = (int) countPositiveInstances(instances);
+        int size = instances.size();
+
+        int majority;
+        int minority;
+
+        if(positiveClasses > (size / 2)) {
+            majority = positiveClasses;
+            minority = size - positiveClasses;
+        } else {
+            minority = positiveClasses;
+            majority = size - positiveClasses;
+        }
+
+        double y = 0;
+        if(minority != 0) {
+            y = 100 * (1.0 * majority - minority) / minority;
+        }
+
+        return y;
+    }
+
     private List<Object> applyFilter(Instances instances, List<Filter> filters, int filterNumber) throws Exception {
         List<Object> list = new ArrayList<>();
         Filter filter;
@@ -100,10 +124,14 @@ public class Evaluator {
         }
 
         if(filter.getClass().getName().contains("SMOTE")) {
-                //SMOTE
+            //SMOTE
+            SMOTE smote = (SMOTE) filter;
+            double y = calculateY(instances);
+            smote.setInputFormat(instances);
+            smote.setPercentage(y);
+
             list.add("SMOTE");
-            //TODO IMPLEMENT SMOTE
-            list.add(instances);
+            list.add(Filter.useFilter(instances, filter));
         } else if(filters.get(filterNumber).getClass().getName().contains("SpreadSubsample")) {
             //Undersampling
             SpreadSubsample undersampling = (SpreadSubsample) filter;
@@ -119,25 +147,7 @@ public class Evaluator {
             oversample.setBiasToUniformClass(1.0);
             oversample.setNoReplacement(false);
 
-            int positiveClasses = (int) countPositiveInstances(instances);
-            int size = instances.size();
-
-            int majority;
-            int minority;
-
-            if(positiveClasses > (size / 2)) {
-                majority = positiveClasses;
-                minority = size - positiveClasses;
-            } else {
-                minority = positiveClasses;
-                majority = size - positiveClasses;
-            }
-
-            double y = 0;
-            if(minority != 0) {
-                y = 100 * (1.0 * majority - minority) / minority;
-            }
-
+            double y = calculateY(instances);
             oversample.setSampleSizePercent(y);
 
             list.add("oversample");
@@ -177,14 +187,14 @@ public class Evaluator {
                     String filterName = (String) filterOut.get(0);
                     sampledTraining = (Instances) filterOut.get(1);
 
-                    LOGGER.log(Level.INFO, "Doing {0} {1} training releases with filter {2}", new Object[]{projName, i, filterName});
+                    LOGGER.log(Level.INFO, "Doing {0} {1} training releases with sample {2}", new Object[]{projName, i, filterName});
 
                     int trainingSize = sampledTraining.size();
                     int testingSize = testing.size();
 
                     double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;
 
-                    double trainingPositiveInstances = countPositiveInstances(sampledTraining);
+                    double trainingPositiveInstances = countPositiveInstances(training);
                     double testingPositiveInstances = countPositiveInstances(testing);
 
                     double defectiveTrainingPercent = (trainingPositiveInstances / trainingSize) * 100;

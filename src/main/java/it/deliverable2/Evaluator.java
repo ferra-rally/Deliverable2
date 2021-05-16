@@ -189,7 +189,7 @@ public class Evaluator {
 
                     LOGGER.log(Level.INFO, "Doing {0} {1} training releases with sample {2}", new Object[]{projName, i, filterName});
 
-                    int trainingSize = sampledTraining.size();
+                    int trainingSize = training.size();
                     int testingSize = testing.size();
 
                     double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;

@@ -10,6 +10,7 @@ import weka.filters.supervised.instance.Resample;
 import weka.filters.supervised.instance.SpreadSubsample;
 
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Evaluator {
@@ -44,7 +45,7 @@ public class Evaluator {
         double count = 0;
 
         for(Instance instance : instances) {
-            count += (int) instance.value(instance.numAttributes() - 1) == 1 ? 1 : 0;
+            count += (int) instance.value(instance.numAttributes() - 1) == 0 ? 1 : 0;
         }
 
         return count;
@@ -175,6 +176,8 @@ public class Evaluator {
                     List<Object> filterOut = applyFilter(training, filters, filterNumber);
                     String filterName = (String) filterOut.get(0);
                     sampledTraining = (Instances) filterOut.get(1);
+
+                    LOGGER.log(Level.INFO, "Doing {0} {1} training releases with filter {2}", new Object[]{projName, i, filterName});
 
                     int trainingSize = sampledTraining.size();
                     int testingSize = testing.size();

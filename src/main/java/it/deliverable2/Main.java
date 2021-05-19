@@ -172,7 +172,11 @@ public class Main {
 
         Evaluator evaluator = new Evaluator();
 
-        String result = evaluator.walkForward(projList, projOwner, classifiers, filters);
+        List<Integer> bestFirstList = new ArrayList<>();
+        bestFirstList.add(5);
+        bestFirstList.add(8);
+
+        String result = evaluator.walkForward(projList, projOwner, classifiers, filters, bestFirstList);
 
         Utils.writeCsvFromString(result);
     }

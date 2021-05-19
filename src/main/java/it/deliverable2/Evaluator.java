@@ -1,7 +1,10 @@
 package it.deliverable2;
 
+import weka.attributeSelection.BestFirst;
+import weka.attributeSelection.CfsSubsetEval;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
+import weka.classifiers.meta.AttributeSelectedClassifier;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
@@ -45,7 +48,7 @@ public class Evaluator {
     private double countPositiveInstances(Instances instances) {
         double count = 0;
 
-        for(Instance instance : instances) {
+        for (Instance instance : instances) {
             count += (int) instance.value(instance.numAttributes() - 1) == 0 ? 1 : 0;
         }
 
@@ -93,7 +96,7 @@ public class Evaluator {
         int majority;
         int minority;
 
-        if(positiveClasses > (size / 2)) {
+        if (positiveClasses > (size / 2)) {
             majority = positiveClasses;
             minority = size - positiveClasses;
         } else {
@@ -102,7 +105,7 @@ public class Evaluator {
         }
 
         double y = 0;
-        if(minority != 0) {
+        if (minority != 0) {
             y = 100 * (1.0 * majority - minority) / minority;
         }
 
@@ -114,7 +117,7 @@ public class Evaluator {
         Filter filter;
 
         //Apply filters, if filter number is equal to -1
-        if(filterNumber == -1) {
+        if (filterNumber == -1) {
             list.add("no_sampling");
             list.add(instances);
 
@@ -123,7 +126,7 @@ public class Evaluator {
             filter = filters.get(filterNumber);
         }
 
-        if(filter.getClass().getName().contains("SMOTE")) {
+        if (filter.getClass().getName().contains("SMOTE")) {
             //SMOTE
             SMOTE smote = (SMOTE) filter;
             double y = calculateY(instances);
@@ -132,7 +135,7 @@ public class Evaluator {
 
             list.add("SMOTE");
             list.add(Filter.useFilter(instances, filter));
-        } else if(filters.get(filterNumber).getClass().getName().contains("SpreadSubsample")) {
+        } else if (filters.get(filterNumber).getClass().getName().contains("SpreadSubsample")) {
             //Undersampling
             SpreadSubsample undersampling = (SpreadSubsample) filter;
             undersampling.setDistributionSpread(1.0);
@@ -140,7 +143,7 @@ public class Evaluator {
 
             list.add("undersampling");
             list.add(Filter.useFilter(instances, filter));
-        } else if(filters.get(filterNumber).getClass().getName().contains("Resample")) {
+        } else if (filters.get(filterNumber).getClass().getName().contains("Resample")) {
             //Oversampling
             Resample oversample = (Resample) filter;
             oversample.setInputFormat(instances);
@@ -157,85 +160,112 @@ public class Evaluator {
         return list;
     }
 
-
-    private String walkForward(String projName, String projOwner, List<Classifier> classifiers, List<Filter> filters) throws Exception {
+    private String compareOptionsForClassifier(String projName, Instances training, Instances testing, List<Classifier> classifiers, List<Filter> filters, List<Integer> bestFirstList, int i) throws Exception {
+        String format = "%s,%d,%.0f%%,%.0f%%,%.0f%%,%s,%s,%s,%.0f,%.0f,%.0f,%.0f,%f,%f,%f,%f\n";
         StringBuilder builder = new StringBuilder();
-        String format = "%s,%d,%.0f%%,%.0f%%,%.0f%%,%s,%s,%.0f,%.0f,%.0f,%.0f,%s,%f,%f,%f\n";
 
-            ConverterUtils.DataSource source = new ConverterUtils.DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
-            Instances instances = source.getDataSet();
-            //dataset, #TrainingRelease, %training (data on training / total data), %Defective in training, %Defective in testing, EPVbeforeFeatureSelection, EPVafterFeatureSelection,classifier, balancing, Feature Selection,TP,  FP,  TN, FN, Precision, Recall, ROC Area, Kappa
+        //Test different filters
+        for (int filterNumber = -1; filterNumber < filters.size(); filterNumber++) {
+            Instances sampledTraining;
 
-            int numReleases = instances.attribute(0).numValues();
-            List<Instances> instancesList = splitDataSet(instances, numReleases);
+            List<Object> filterOut = applyFilter(training, filters, filterNumber);
+            String filterName = (String) filterOut.get(0);
+            sampledTraining = (Instances) filterOut.get(1);
 
-            //Walk forward
-            for(int i = 0; i < numReleases - 1; i++) {
-                Instances testing = new Instances(instancesList.get(0), 0);
-                testing.addAll(instancesList.get(i + 1));
+            int trainingSize = training.size();
+            int testingSize = testing.size();
 
-                Instances training = new Instances(instancesList.get(0), 0);
-                for (int j = 0; j <= i; j++) {
-                    training.addAll(instancesList.get(j));
-                }
+            double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;
 
-                //Test different filters
-                for (int filterNumber = -1; filterNumber < filters.size(); filterNumber++) {
-                    Instances sampledTraining;
+            double trainingPositiveInstances = countPositiveInstances(training);
+            double testingPositiveInstances = countPositiveInstances(testing);
 
-                    List<Object> filterOut = applyFilter(training, filters, filterNumber);
-                    String filterName = (String) filterOut.get(0);
-                    sampledTraining = (Instances) filterOut.get(1);
+            double defectiveTrainingPercent = (trainingPositiveInstances / trainingSize) * 100;
+            double defectiveTestingPercent = (testingPositiveInstances / testingSize) * 100;
 
-                    LOGGER.log(Level.INFO, "Doing {0} {1} training releases with sample {2}", new Object[]{projName, i, filterName});
+            //Test classifiers
+            for (Classifier classifier : classifiers) {
+                //No Feature selection and best first
+                for (int featureSelection = -1; featureSelection < bestFirstList.size(); featureSelection++) {
 
-                    int trainingSize = training.size();
-                    int testingSize = testing.size();
+                    String featureSelectionName = "no_selection";
 
-                    double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;
+                    Classifier classifierToBeUsed = classifier;
+                    if (featureSelection >= 0) {
+                        AttributeSelectedClassifier attributeSelectedClassifier = new AttributeSelectedClassifier();
+                        CfsSubsetEval eval = new CfsSubsetEval();
 
-                    double trainingPositiveInstances = countPositiveInstances(training);
-                    double testingPositiveInstances = countPositiveInstances(testing);
+                        int bestFirst = bestFirstList.get(featureSelection);
 
-                    double defectiveTrainingPercent = (trainingPositiveInstances / trainingSize) * 100;
-                    double defectiveTestingPercent = (testingPositiveInstances / testingSize) * 100;
+                        BestFirst search = new BestFirst();
+                        search.setSearchTermination(bestFirst);
 
-                    for (Classifier classifier : classifiers) {
-                        Map<String, Double> map = compareClassifiers(sampledTraining, testing, classifier);
+                        attributeSelectedClassifier.setClassifier(classifier);
+                        attributeSelectedClassifier.setEvaluator(eval);
+                        attributeSelectedClassifier.setSearch(search);
+                        featureSelectionName = "best_first_" + bestFirst;
 
-                        double precision = map.get("precision");
-                        String precisionString;
-                        if (Double.isNaN(precision)) {
-                            precisionString = "?";
-                        } else {
-                            precisionString = precision + "";
-                        }
-                        String longName = classifier.getClass().getName();
-                        String[] tokens = longName.split("\\.");
-
-                        String name = tokens[tokens.length - 1];
-
-                        String row = String.format(Locale.US, format,
-                                projName, i + 1, percentTraining, defectiveTrainingPercent, defectiveTestingPercent, filterName,
-                                name,
-                                map.get("tp"), map.get("fp"), map.get("tn"), map.get("fn"),
-                                precisionString, map.get("recall"), map.get("auc"), map.get("kappa"));
-
-                        builder.append(row);
+                        classifierToBeUsed = attributeSelectedClassifier;
                     }
+
+                    Map<String, Double> map = compareClassifiers(sampledTraining, testing, classifierToBeUsed);
+
+                    double precision = map.get("precision");
+
+                    String longName = classifier.getClass().getName();
+                    String[] tokens = longName.split("\\.");
+
+                    String name = tokens[tokens.length - 1];
+                    LOGGER.log(Level.INFO, "Doing {0} {1} training releases {2} {3} {4}", new Object[]{projName, i, name, featureSelectionName, filterName});
+
+                    String row = String.format(Locale.US, format,
+                            projName, i + 1, percentTraining, defectiveTrainingPercent, defectiveTestingPercent, filterName,
+                            name, featureSelectionName,
+                            map.get("tp"), map.get("fp"), map.get("tn"), map.get("fn"),
+                            precision, map.get("recall"), map.get("auc"), map.get("kappa"));
+
+                    builder.append(row);
                 }
             }
-
+        }
 
         return builder.toString();
     }
 
-    public String walkForward(List<String> projectList, String projOwner, List<Classifier> classifiers, List<Filter> filters) throws Exception {
-        StringBuilder builder = new StringBuilder();
-        builder.append("Dataset,#TrainingRelease,%training,%Defective_in_training,%Defective_in_testing,Filter,Classifier,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
+    private String walkForward(String projName, String projOwner, List<Classifier> classifiers, List<Filter> filters, List<Integer> bestFirstList) throws Exception {
 
-        for(String projName : projectList) {
-            builder.append(walkForward(projName, projOwner, classifiers, filters));
+        StringBuilder builder = new StringBuilder();
+
+        ConverterUtils.DataSource source = new ConverterUtils.DataSource("./out/" + projName + "_" + projOwner + "_out.arff");
+        Instances instances = source.getDataSet();
+        //dataset, #TrainingRelease, %training (data on training / total data), %Defective in training, %Defective in testing, EPVbeforeFeatureSelection, EPVafterFeatureSelection,classifier, balancing, Feature Selection,TP,  FP,  TN, FN, Precision, Recall, ROC Area, Kappa
+
+        int numReleases = instances.attribute(0).numValues();
+        List<Instances> instancesList = splitDataSet(instances, numReleases);
+
+        //Walk forward
+        for (int i = 0; i < numReleases - 1; i++) {
+            Instances testing = new Instances(instancesList.get(0), 0);
+            testing.addAll(instancesList.get(i + 1));
+
+            Instances training = new Instances(instancesList.get(0), 0);
+            for (int j = 0; j <= i; j++) {
+                training.addAll(instancesList.get(j));
+            }
+
+
+            builder.append(compareOptionsForClassifier(projName, training, testing, classifiers, filters, bestFirstList, i));
+        }
+
+        return builder.toString();
+    }
+
+    public String walkForward(List<String> projectList, String projOwner, List<Classifier> classifiers, List<Filter> filters, List<Integer> bestFirstList) throws Exception {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Dataset,#TrainingRelease,%training,%Defective_in_training,%Defective_in_testing,Balancing,Classifier,Feature_Selection,TP,FP,TN,FN,Precision,Recall,AUC,Kappa\n");
+
+        for (String projName : projectList) {
+            builder.append(walkForward(projName, projOwner, classifiers, filters, bestFirstList));
         }
 
         return builder.toString();

@@ -4,11 +4,11 @@ import weka.attributeSelection.BestFirst;
 import weka.attributeSelection.CfsSubsetEval;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
-import weka.classifiers.meta.AttributeSelectedClassifier;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
 import weka.filters.Filter;
+import weka.filters.supervised.attribute.AttributeSelection;
 import weka.filters.supervised.instance.Resample;
 import weka.filters.supervised.instance.SMOTE;
 import weka.filters.supervised.instance.SpreadSubsample;
@@ -164,51 +164,57 @@ public class Evaluator {
         String format = "%s,%d,%.0f%%,%.0f%%,%.0f%%,%s,%s,%s,%.0f,%.0f,%.0f,%.0f,%f,%f,%f,%f\n";
         StringBuilder builder = new StringBuilder();
 
-        //Test different filters
-        for (int filterNumber = -1; filterNumber < filters.size(); filterNumber++) {
-            Instances sampledTraining;
+        for (int featureSelection = -1; featureSelection < bestFirstList.size(); featureSelection++) {
+            Instances selectedTraining;
+            Instances selectedTesting;
 
-            List<Object> filterOut = applyFilter(training, filters, filterNumber);
-            String filterName = (String) filterOut.get(0);
-            sampledTraining = (Instances) filterOut.get(1);
+            String featureSelectionName = "no_selection";
 
-            int trainingSize = training.size();
-            int testingSize = testing.size();
+            //Apply feature selection
+            if (featureSelection >= 0) {
+                AttributeSelection filter = new AttributeSelection();
+                CfsSubsetEval eval = new CfsSubsetEval();
+                int bestFirst = bestFirstList.get(featureSelection);
 
-            double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;
+                BestFirst search = new BestFirst();
+                search.setSearchTermination(bestFirst);
 
-            double trainingPositiveInstances = countPositiveInstances(training);
-            double testingPositiveInstances = countPositiveInstances(testing);
+                filter.setEvaluator(eval);
+                filter.setSearch(search);
+                filter.setInputFormat(training);
+                featureSelectionName = "best_first_" + bestFirst;
 
-            double defectiveTrainingPercent = (trainingPositiveInstances / trainingSize) * 100;
-            double defectiveTestingPercent = (testingPositiveInstances / testingSize) * 100;
+                selectedTraining = Filter.useFilter(training, filter);
+                selectedTesting = Filter.useFilter(testing, filter);
+            } else {
+                selectedTraining = training;
+                selectedTesting = testing;
+            }
 
-            //Test classifiers
-            for (Classifier classifier : classifiers) {
-                //No Feature selection and best first
-                for (int featureSelection = -1; featureSelection < bestFirstList.size(); featureSelection++) {
+            //Test different filters
+            for (int filterNumber = -1; filterNumber < filters.size(); filterNumber++) {
+                Instances sampledTraining;
 
-                    String featureSelectionName = "no_selection";
+                List<Object> filterOut = applyFilter(selectedTraining, filters, filterNumber);
+                String filterName = (String) filterOut.get(0);
+                sampledTraining = (Instances) filterOut.get(1);
 
-                    Classifier classifierToBeUsed = classifier;
-                    if (featureSelection >= 0) {
-                        AttributeSelectedClassifier attributeSelectedClassifier = new AttributeSelectedClassifier();
-                        CfsSubsetEval eval = new CfsSubsetEval();
+                int trainingSize = training.size();
+                int testingSize = testing.size();
 
-                        int bestFirst = bestFirstList.get(featureSelection);
+                double percentTraining = (trainingSize / (trainingSize + testingSize * 1.0)) * 100;
 
-                        BestFirst search = new BestFirst();
-                        search.setSearchTermination(bestFirst);
+                double trainingPositiveInstances = countPositiveInstances(training);
+                double testingPositiveInstances = countPositiveInstances(testing);
 
-                        attributeSelectedClassifier.setClassifier(classifier);
-                        attributeSelectedClassifier.setEvaluator(eval);
-                        attributeSelectedClassifier.setSearch(search);
-                        featureSelectionName = "best_first_" + bestFirst;
+                double defectiveTrainingPercent = (trainingPositiveInstances / trainingSize) * 100;
+                double defectiveTestingPercent = (testingPositiveInstances / testingSize) * 100;
 
-                        classifierToBeUsed = attributeSelectedClassifier;
-                    }
+                //Test classifiers
+                for (Classifier classifier : classifiers) {
+                    //No Feature selection and best first
 
-                    Map<String, Double> map = compareClassifiers(sampledTraining, testing, classifierToBeUsed);
+                    Map<String, Double> map = compareClassifiers(sampledTraining, selectedTesting, classifier);
 
                     double precision = map.get("precision");
 
@@ -225,10 +231,10 @@ public class Evaluator {
                             precision, map.get("recall"), map.get("auc"), map.get("kappa"));
 
                     builder.append(row);
+
                 }
             }
         }
-
         return builder.toString();
     }
 

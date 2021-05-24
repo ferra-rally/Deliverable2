@@ -174,7 +174,6 @@ public class Main {
 
         List<Integer> bestFirstList = new ArrayList<>();
         bestFirstList.add(5);
-        bestFirstList.add(8);
 
         String result = evaluator.walkForward(projList, projOwner, classifiers, filters, bestFirstList);
 

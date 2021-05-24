@@ -76,6 +76,13 @@ public class Evaluator {
         double fp = eval.numFalsePositives(classIndex);
         double fn = eval.numFalseNegatives(classIndex);
 
+        if(tp + tn + fp + fn == 0) {
+            auc = 0;
+            kappa = 0;
+            precision = 0;
+            recall = 0;
+        }
+
         map.put("auc", auc);
         map.put("kappa", kappa);
         map.put("precision", precision);

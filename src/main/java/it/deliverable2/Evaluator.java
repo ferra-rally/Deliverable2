@@ -3,7 +3,9 @@ package it.deliverable2;
 import weka.attributeSelection.BestFirst;
 import weka.attributeSelection.CfsSubsetEval;
 import weka.classifiers.Classifier;
+import weka.classifiers.CostMatrix;
 import weka.classifiers.Evaluation;
+import weka.classifiers.meta.CostSensitiveClassifier;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
@@ -172,6 +174,13 @@ public class Evaluator {
         String format = "%s,%d,%.0f%%,%.0f%%,%.0f%%,%s,%s,%s,%.0f,%.0f,%.0f,%.0f,%f,%f,%f,%f\n";
         StringBuilder builder = new StringBuilder();
 
+        //Setup cost matrix with FN cost=10 and FP cost=1
+        CostMatrix costMatrix = new CostMatrix(2);
+        costMatrix.setCell(0,0, 0.0);
+        costMatrix.setCell(1,0, 1.0);
+        costMatrix.setCell(0,1, 10.0);
+        costMatrix.setCell(1,1, 0.0);
+
         for (int featureSelection = -1; featureSelection < bestFirstList.size(); featureSelection++) {
             Instances selectedTraining;
             Instances selectedTesting;
@@ -218,11 +227,17 @@ public class Evaluator {
                 double defectiveTrainingPercent = (trainingPositiveInstances / trainingSize) * 100;
                 double defectiveTestingPercent = (testingPositiveInstances / testingSize) * 100;
 
+                if(trainingSize == 0) defectiveTrainingPercent = 0;
+                if(testingSize == 0) defectiveTestingPercent = 0;
+
                 //Test classifiers
                 for (Classifier classifier : classifiers) {
-                    //No Feature selection and best first
+                    CostSensitiveClassifier costSensitiveClassifier = new CostSensitiveClassifier();
+                    costSensitiveClassifier.setClassifier(classifier);
 
-                    Map<String, Double> map = compareClassifiers(sampledTraining, selectedTesting, classifier);
+                    costSensitiveClassifier.setCostMatrix(costMatrix);
+
+                    Map<String, Double> map = compareClassifiers(sampledTraining, selectedTesting, costSensitiveClassifier);
 
                     double precision = map.get("precision");
 

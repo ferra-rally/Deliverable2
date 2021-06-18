@@ -98,7 +98,12 @@ public class JiraBoundary {
         if(proportionList.isEmpty()) return openingVersion;
 
         //Implements incremental proportion
-        double proportion = proportionList.get((int) Math.floor((proportionList.size() * 1.0) / 2));
+        double sum = 0;
+        for(Double prop : proportionList) {
+          sum += prop;
+        }
+
+        double proportion = sum/proportionList.size();
 
         int injectedNumber = (int) Math.floor(fixedVersion.getNumber() - ((fixedVersion.getNumber() - openingVersion.getNumber()) * proportion));
 
